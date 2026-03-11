@@ -70,17 +70,17 @@ __/\\\\\\\\\\\\_________________________________________________________________
       _\/\\\_______/\\\__\//\\\__/\\\__\/\\\__\/\\\__\/\\\_\/\\\_\/\\\___\/\\\_\/\\\___\/\\\_\/\\\__\/\\\__\/\\\___________\/\\\______________/\\\/////\\\__\////////\\\____\/\\\_/\\_____\/\\\_____/\\_/\\\_______________   
        _\/\\\\\\\\\\\\/____\///\\\\\/___\/\\\__\/\\\__\/\\\_\/\\\_\/\\\___\/\\\_\//\\\\\\\\\__\/\\\__\/\\\__\/\\\___________\/\\\_____________\//\\\\\\\\/\\__/\\\\\\\\\\____\//\\\\\____/\\\\\\\\\_\//\\\\/________________  
         _\////////////________\/////_____\///___\///___\///__\///__\///____\///___\/////////___\///___\///___\///____________\///_______________\////////\//__\//////////______\/////____\/////////___\////__________________ 
-__/\\\__________________________________________________________/\\\\____________/\\\\_______________________________________________________________________________________                                                 
- _\/\\\__________________________________/\\\___________________\/\\\\\\________/\\\\\\_______________________________________________________________________________________                                                
-  _\/\\\______________/\\\_______________\/\\\___________________\/\\\//\\\____/\\\//\\\_______________________________________________/\\\\\\\\_______________________________                                               
-   _\/\\\_____________\///___/\\/\\\\\\___\/\\\\\\\\______________\/\\\\///\\\/\\\/_\/\\\__/\\\\\\\\\_____/\\/\\\\\\____/\\\\\\\\\_____/\\\////\\\_____/\\\\\\\\___/\\/\\\\\\\__                                              
-    _\/\\\______________/\\\_\/\\\////\\\__\/\\\////\\\____________\/\\\__\///\\\/___\/\\\_\////////\\\___\/\\\////\\\__\////////\\\___\//\\\\\\\\\___/\\\/////\\\_\/\\\/////\\\_                                             
-     _\/\\\_____________\/\\\_\/\\\__\//\\\_\/\\\\\\\\/_____________\/\\\____\///_____\/\\\___/\\\\\\\\\\__\/\\\__\//\\\___/\\\\\\\\\\___\///////\\\__/\\\\\\\\\\\__\/\\\___\///__                                            
-      _\/\\\_____________\/\\\_\/\\\___\/\\\_\/\\\///\\\_____________\/\\\_____________\/\\\__/\\\/////\\\__\/\\\___\/\\\__/\\\/////\\\___/\\_____\\\_\//\\///////___\/\\\_________                                           
-       _\/\\\\\\\\\\\\\\\_\/\\\_\/\\\___\/\\\_\/\\\_\///\\\___________\/\\\_____________\/\\\_\//\\\\\\\\/\\_\/\\\___\/\\\_\//\\\\\\\\/\\_\//\\\\\\\\___\//\\\\\\\\\\_\/\\\_________                                          
-        _\///////////////__\///__\///____\///__\///____\///____________\///______________\///___\////////\//__\///____\///___\////////\//___\////////_____\//////////__\///__________                                         
-                                                             
-  ** FASTLY LINK MANAGER/EDITOR **  
+                        __/\\\__________________________________________________________/\\\\____________/\\\\_______________________________________________________________________________________                                                 
+                         _\/\\\__________________________________/\\\___________________\/\\\\\\________/\\\\\\_______________________________________________________________________________________                                                
+                          _\/\\\______________/\\\_______________\/\\\___________________\/\\\//\\\____/\\\//\\\_______________________________________________/\\\\\\\\_______________________________                                               
+                           _\/\\\_____________\///___/\\/\\\\\\___\/\\\\\\\\______________\/\\\\///\\\/\\\/_\/\\\__/\\\\\\\\\_____/\\/\\\\\\____/\\\\\\\\\_____/\\\////\\\_____/\\\\\\\\___/\\/\\\\\\\__                                              
+                            _\/\\\______________/\\\_\/\\\////\\\__\/\\\////\\\____________\/\\\__\///\\\/___\/\\\_\////////\\\___\/\\\////\\\__\////////\\\___\//\\\\\\\\\___/\\\/////\\\_\/\\\/////\\\_                                             
+                             _\/\\\_____________\/\\\_\/\\\__\//\\\_\/\\\\\\\\/_____________\/\\\____\///_____\/\\\___/\\\\\\\\\\__\/\\\__\//\\\___/\\\\\\\\\\___\///////\\\__/\\\\\\\\\\\__\/\\\___\///__                                            
+                              _\/\\\_____________\/\\\_\/\\\___\/\\\_\/\\\///\\\_____________\/\\\_____________\/\\\__/\\\/////\\\__\/\\\___\/\\\__/\\\/////\\\___/\\_____\\\_\//\\///////___\/\\\_________                                           
+                               _\/\\\\\\\\\\\\\\\_\/\\\_\/\\\___\/\\\_\/\\\_\///\\\___________\/\\\_____________\/\\\_\//\\\\\\\\/\\_\/\\\___\/\\\_\//\\\\\\\\/\\_\//\\\\\\\\___\//\\\\\\\\\\_\/\\\_________                                          
+                                _\///////////////__\///__\///____\///__\///____\///____________\///______________\///___\////////\//__\///____\///___\////////\//___\////////_____\//////////__\///__________
+
+** FASTLY LINK MANAGER/EDITOR **   
 </pre>
 </header>
 
@@ -186,14 +186,6 @@ __/\\\__________________________________________________________/\\\\___________
             <li>Make sure to change the expiration to <strong>Never expire</strong>.</li>
             <li>Click <strong>Create Token</strong>. Copy the string provided.</li>
         </ol>
-    </div>
-</div>
-
-<div id="allLinksModal" class="modal-overlay hidden">
-    <div class="modal-content">
-        <span class="close-btn" onclick="closeAllModals()">[X]</span>
-        <h3 id="allLinksTitle" style="color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px;">ALL LINKS</h3>
-        <div id="allLinksContent"></div>
     </div>
 </div>
 
@@ -409,7 +401,7 @@ __/\\\__________________________________________________________/\\\\___________
 
     function initDeactivateActivate(accIndex, serviceId) {
         setTarget(accIndex, serviceId);
-        triggerDeactivateFromEdit(); // Reusing the setup logic
+        triggerDeactivateFromEdit();
     }
 
     function triggerDeactivateFromEdit() {
@@ -452,34 +444,28 @@ __/\\\__________________________________________________________/\\\\___________
         btn.innerText = "CLONING & SAVING..."; btn.disabled = true;
 
         try {
-            // 1. Clone version
             const clone = await fastlyReq(`/service/${currentTarget.id}/version/${currentTarget.version}/clone`, 'PUT', null, currentTarget.key);
             const nv = clone.number;
 
-            // 2. Update Service Name
             if (newName !== currentTarget.name) await fastlyReq(`/service/${currentTarget.id}`, 'PUT', {name: newName}, currentTarget.key);
             
-            // 3. Update Domain
             if (newDomain !== currentTarget.domain && currentTarget.domain !== "N/A") {
                 await fastlyReq(`/service/${currentTarget.id}/version/${nv}/domain/${currentTarget.domain}`, 'PUT', {name: newDomain}, currentTarget.key);
             } else if (newDomain && currentTarget.domain === "N/A") {
                 await fastlyReq(`/service/${currentTarget.id}/version/${nv}/domain`, 'POST', {name: newDomain}, currentTarget.key);
             }
 
-            // 4. Update Backend
             if (newHost !== currentTarget.host && currentTarget.backendName) {
                 await fastlyReq(`/service/${currentTarget.id}/version/${nv}/backend/${currentTarget.backendName}`, 'PUT', {address: newHost}, currentTarget.key);
             }
 
-            // 5. Reactivate if it was live
             if (currentTarget.isActive) {
                 await fastlyReq(`/service/${currentTarget.id}/version/${nv}/activate`, 'PUT', null, currentTarget.key);
             }
 
             showToast("Updates deployed successfully!");
             closeAllModals();
-            cache[currentTarget.accIndex] = null; // force reload
-            renderPage(currentTarget.accIndex);
+            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new data instead of crashing
         } catch(e) { showToast(`Edit Error: ${e.message}`, 'error'); }
         
         btn.innerText = "💾 SAVE CHANGES & DEPLOY"; btn.disabled = false;
@@ -494,8 +480,7 @@ __/\\\__________________________________________________________/\\\\___________
             showToast(`Service successfully ${currentTarget.isActive ? 'deactivated' : 'reactivated'}.`, 'warn');
             closeAllModals();
             
-            cache[currentTarget.accIndex] = null; // Clear cache to reflect new active/inactive state visually
-            renderPage(currentTarget.accIndex); 
+            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new data and auto-renders
         } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
     }
 
@@ -506,8 +491,8 @@ __/\\\__________________________________________________________/\\\\___________
             await fastlyReq(`/service/${currentTarget.id}`, 'DELETE', null, currentTarget.key);
             showToast("Service permanently deleted.");
             closeAllModals();
-            cache[currentTarget.accIndex] = null;
-            renderPage(currentTarget.accIndex);
+            
+            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new list, removing the deleted item
         } catch (e) { showToast(`Delete Error: ${e.message}`, 'error'); }
         btn.disabled = false; btn.innerText = "DELETE";
     }
