@@ -432,13 +432,14 @@ __/\\\\\\\\\\\\_________________________________________________________________
         document.getElementById('deactivateConfirmBtn').disabled = (input !== currentTarget.name);
     }
 
-    // --- API Executions ---
     async function submitEdit() {
         const btn = document.getElementById('editSaveBtn');
         const newName = document.getElementById('editName').value.trim();
         const newDomain = document.getElementById('editDomain').value.trim();
-        const newHost = document.getElementById('editHost').value.trim();
+        let newHost = document.getElementById('editHost').value.trim();
         
+        newHost = newHost.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+
         if (!newName || !newDomain || !newHost) return showToast("All fields required.", "error");
 
         btn.innerText = "CLONING & SAVING..."; btn.disabled = true;
@@ -456,7 +457,14 @@ __/\\\\\\\\\\\\_________________________________________________________________
             }
 
             if (newHost !== currentTarget.host && currentTarget.backendName) {
-                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/backend/${currentTarget.backendName}`, 'PUT', {address: newHost}, currentTarget.key);
+                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/backend/${currentTarget.backendName}`, 'PUT', {
+                    address: newHost,
+                    port: 443,
+                    use_ssl: true,
+                    ssl_cert_hostname: newHost,
+                    ssl_sni_hostname: newHost,
+                    override_host: newHost
+                }, currentTarget.key);
             }
 
             if (currentTarget.isActive) {
@@ -465,7 +473,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
 
             showToast("Updates deployed successfully!");
             closeAllModals();
-            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new data instead of crashing
+            fetchServicesForAccount(currentTarget.accIndex); 
         } catch(e) { showToast(`Edit Error: ${e.message}`, 'error'); }
         
         btn.innerText = "💾 SAVE CHANGES & DEPLOY"; btn.disabled = false;
@@ -497,13 +505,14 @@ __/\\\\\\\\\\\\_________________________________________________________________
         btn.disabled = false; btn.innerText = "DELETE";
     }
 
-    // --- Create & File Actions ---
     async function createService() {
         const btn = document.getElementById('provisionBtn');
         const key = document.getElementById('activeAccount').value;
         const name = document.getElementById('serviceName').value.trim();
         const sub = document.getElementById('subdomain').value.trim();
-        const host = document.getElementById('host').value.trim();
+        let host = document.getElementById('host').value.trim();
+
+        host = host.replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 
         if(!name || !sub || !host) return showToast("ERROR: Fill all fields.", 'error');
 
@@ -519,7 +528,17 @@ __/\\\\\\\\\\\\_________________________________________________________________
             const svc = await fastlyReq('/service', 'POST', { name }, key);
             const ver = await fastlyReq(`/service/${svc.id}/version`, 'POST', null, key);
             await fastlyReq(`/service/${svc.id}/version/${ver.number}/domain`, 'POST', { name: `${sub}.global.ssl.fastly.net` }, key);
-            await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { name: "Origin", address: host, port: 80 }, key);
+            
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { 
+                name: "Origin", 
+                address: host, 
+                port: 443,
+                use_ssl: true,
+                ssl_cert_hostname: host,
+                ssl_sni_hostname: host,
+                override_host: host
+            }, key);
+            
             await fastlyReq(`/service/${svc.id}/version/${ver.number}/activate`, 'PUT', null, key);
             
             showToast("Success: Link Active!");
