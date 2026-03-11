@@ -189,30 +189,34 @@ __/\\\__________________________________________________________/\\\\___________
         </ol>
     </div>
 </div>
+<div id="allLinksModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <span class="close-btn" onclick="document.getElementById('allLinksModal').classList.add('hidden')">[X]</span>
+        <h3 id="allLinksTitle" style="color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px;">ALL LINKS</h3>
+        <div id="allLinksContent"></div>
+    </div>
+</div>
 
 <script>
-    let db = {
-        accounts: [],
-        links: []
-    };
+    let db = { accounts: [] };
+    let cache = {};
 
-    // --- Core Logic ---
     function init() {
         const saved = localStorage.getItem('dominum_data');
         if (saved) db = JSON.parse(saved);
         render();
     }
 
-    function save() {
-        localStorage.setItem('dominum_data', JSON.stringify(db));
-        render();
-    }
+    function save() { localStorage.setItem('dominum_data', JSON.stringify(db)); render(); }
 
     function render() {
         const accList = document.getElementById('accountList');
         const accSelect = document.getElementById('activeAccount');
+        const accContainer = document.getElementById('accordionContainer');
+        
         accList.innerHTML = "";
         accSelect.innerHTML = "";
+        accContainer.innerHTML = "";
 
         db.accounts.forEach((acc, index) => {
             accList.innerHTML += `
@@ -221,139 +225,214 @@ __/\\\__________________________________________________________/\\\\___________
                     <span style="color:red; cursor:pointer;" onclick="deleteAccount(${index})">[DEL]</span>
                 </div>`;
             accSelect.innerHTML += `<option value="${acc.key}">${acc.name}</option>`;
+
+            accContainer.innerHTML += `
+                <button class="accordion-btn" onclick="toggleAccordion('${index}')" id="btn-acc-${index}">
+                    [+] ${acc.name} <span id="count-acc-${index}"></span>
+                </button>
+                <div id="content-acc-${index}" class="accordion-content hidden">
+                    <div id="list-acc-${index}" style="min-height: 50px;">Click to load links...</div>
+                    <div class="pagination-controls hidden" id="page-ctrl-${index}">
+                        <button id="prev-btn-${index}" class="secondary" onclick="changePage('${index}', -1)">PREV 25</button>
+                        <span id="page-indicator-${index}" style="font-size: 0.8rem; color: #888;">Page 1</span>
+                        <button id="next-btn-${index}" class="secondary" onclick="changePage('${index}', 1)">NEXT 25</button>
+                    </div>
+                    <button class="secondary" style="margin-top:10px;" onclick="loadAllModal('${index}')">VIEW ALL LINKS IN MODAL</button>
+                </div>
+            `;
         });
 
         const isLocked = db.accounts.length === 0;
         document.getElementById('lock1').className = isLocked ? 'locked-overlay' : 'hidden';
         document.getElementById('lock2').className = isLocked ? 'locked-overlay' : 'hidden';
-
-        if(!isLocked) fetchServices();
     }
 
-    // --- Modal Logic ---
-    function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
-    function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
-
-    // --- Account Actions ---
-    function addAccount() {
-        const name = document.getElementById('accName').value;
-        const key = document.getElementById('accKey').value;
-        if (!name || !key) return alert("Fill all fields.");
-        db.accounts.push({ name, key });
-        save();
-        document.getElementById('accName').value = '';
-        document.getElementById('accKey').value = '';
-    }
-
-    function deleteAccount(index) {
-        db.accounts.splice(index, 1);
-        save();
-    }
-
-    async function fastlyReq(endpoint, method = 'GET', body = null) {
-        const key = document.getElementById('activeAccount').value;
-        if (!key) throw new Error("No API key selected.");
-        
+    async function fastlyReq(endpoint, method = 'GET', body = null, specificKey = null) {
+        const key = specificKey || document.getElementById('activeAccount').value;
         const headers = { "Fastly-Key": key, "Accept": "application/json" };
         if (body) headers["Content-Type"] = "application/json";
 
         const res = await fetch(`/fastly-proxy${endpoint}`, {
             method, headers, body: body ? JSON.stringify(body) : null
         });
-
-        if (!res.ok) {
-            const errText = await res.text();
-            throw new Error(`HTTP ${res.status}: ${errText}`);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
     }
 
-    async function fetchServices() {
-        const list = document.getElementById('serviceList');
-        list.innerHTML = "<span style='color: #aaa;'>Establishing secure connection to Fastly...</span>";
-        try {
-            const services = await fastlyReq('/service');
-            if (!services) return;
-            
-            list.innerHTML = services.length ? "" : "No active links found for this account.";
-            
-            services.forEach(s => {
-                list.innerHTML += `
-                    <div class="service-card">
-                        <div><strong>${s.name}</strong> <span style="float:right; font-size:0.7rem;">${s.id}</span></div>
-                        <div class="grid" style="margin-top:10px;">
-                            <button onclick="manageService('${s.id}')">EDIT</button>
-                            <button class="danger" onclick="deleteService('${s.id}')">DEACTIVATE/DELETE</button>
-                        </div>
-                    </div>`;
-            });
-        } catch(e) { 
-            console.error(e);
-            list.innerHTML = `
-                <div style="color: var(--danger); border: 1px solid var(--danger); padding: 10px; background: rgba(255,0,0,0.1);">
-                    <strong>[!] CONNECTION FAILED</strong><br><br>
-                    ${e.message}<br><br>
-                    <span style="font-size: 0.8rem; color: #ccc;">
-                        If the error says 'Failed to fetch' or 'NetworkError', your browser is blocking the request due to CORS policies.
-                    </span>
-                </div>`;
+    function addAccount() {
+        const name = document.getElementById('accName').value;
+        const key = document.getElementById('accKey').value;
+        if (!name || !key) return alert("Fill all fields.");
+        db.accounts.push({ name, key });
+        save();
+        document.getElementById('accName').value = ''; document.getElementById('accKey').value = '';
+    }
+    function deleteAccount(index) { db.accounts.splice(index, 1); save(); }
+    
+    function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
+    function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
+
+    async function toggleAccordion(index) {
+        const content = document.getElementById(`content-acc-${index}`);
+        const btn = document.getElementById(`btn-acc-${index}`);
+        if (content.classList.contains('hidden')) {
+            content.classList.remove('hidden');
+            btn.innerHTML = btn.innerHTML.replace('[+]', '[-]');
+            if (!cache[index]) await fetchServicesForAccount(index);
+            else renderPage(index);
+        } else {
+            content.classList.add('hidden');
+            btn.innerHTML = btn.innerHTML.replace('[-]', '[+]');
         }
     }
 
+    async function fetchServicesForAccount(index) {
+        const listDiv = document.getElementById(`list-acc-${index}`);
+        listDiv.innerHTML = `<div class="spinner"></div> Fetching service list...`;
+        try {
+            const key = db.accounts[index].key;
+            const services = await fastlyReq('/service', 'GET', null, key);
+            
+            document.getElementById(`count-acc-${index}`).innerText = `(${services.length}/100 Links)`;
+            
+            cache[index] = { data: services, page: 1, totalPages: Math.ceil(services.length / 25) };
+            renderPage(index);
+        } catch (e) { listDiv.innerHTML = `<span style="color:var(--danger)">API Error: Invalid token or offline.</span>`; }
+    }
+
+    async function renderPage(index) {
+        const state = cache[index];
+        const listDiv = document.getElementById(`list-acc-${index}`);
+        const ctrlDiv = document.getElementById(`page-ctrl-${index}`);
+        const key = db.accounts[index].key;
+
+        if (state.data.length === 0) {
+            listDiv.innerHTML = "<span style='color:#555;'>No links provisioned on this account.</span>";
+            ctrlDiv.classList.add('hidden');
+            return;
+        }
+
+        listDiv.innerHTML = `<div class="spinner"></div> Extracting Domains & Hosts for Page ${state.page}...`;
+        ctrlDiv.classList.add('hidden');
+
+        const start = (state.page - 1) * 25;
+        const end = start + 25;
+        const pageServices = state.data.slice(start, end);
+        let html = "";
+
+        for (const s of pageServices) {
+            try {
+                const v = s.versions.find(ver => ver.active)?.number || s.versions[0]?.number;
+                if (!v) continue;
+                
+                const [domRes, bakRes] = await Promise.all([
+                    fastlyReq(`/service/${s.id}/version/${v}/domain`, 'GET', null, key).catch(()=>[]),
+                    fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[])
+                ]);
+                
+                const domainName = domRes[0]?.name || "N/A";
+                const hostName = bakRes[0]?.address || "N/A";
+
+                html += `
+                    <div class="service-card">
+                        <strong style="color: #fff;">${s.name}</strong> <br>
+                        <span style="color:#aaa;">Domain:</span> <a href="https://${domainName}" target="_blank">${domainName}</a><br>
+                        <span style="color:#aaa;">Host:</span> <a href="http://${hostName}" target="_blank">${hostName}</a>
+                    </div>`;
+            } catch (e) {}
+        }
+
+        listDiv.innerHTML = html;
+        ctrlDiv.classList.remove('hidden');
+        document.getElementById(`page-indicator-${index}`).innerText = `Page ${state.page} / ${state.totalPages}`;
+        document.getElementById(`prev-btn-${index}`).disabled = state.page === 1;
+        document.getElementById(`next-btn-${index}`).disabled = state.page === state.totalPages;
+    }
+
+    function changePage(index, dir) {
+        cache[index].page += dir;
+        renderPage(index);
+    }
+
+    async function loadAllModal(index) {
+        const modal = document.getElementById('allLinksModal');
+        const content = document.getElementById('allLinksContent');
+        const state = cache[index];
+        const key = db.accounts[index].key;
+        
+        document.getElementById('allLinksTitle').innerText = `ALL LINKS - ${db.accounts[index].name}`;
+        modal.classList.remove('hidden');
+        content.innerHTML = `<div class="spinner"></div> Compiling complete list (This may take a moment to prevent rate limits)...`;
+
+        let html = "";
+        for (const s of state.data) {
+            try {
+                const v = s.versions.find(ver => ver.active)?.number || s.versions[0]?.number;
+                if(!v) continue;
+                const domRes = await fastlyReq(`/service/${s.id}/version/${v}/domain`, 'GET', null, key).catch(()=>[]);
+                const bakRes = await fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[]);
+                const domainName = domRes[0]?.name || "N/A";
+                const hostName = bakRes[0]?.address || "N/A";
+
+                html += `
+                    <div class="service-card" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <strong>${s.name}</strong><br>
+                            <a href="https://${domainName}" target="_blank">${domainName}</a> -> <a href="http://${hostName}" target="_blank">${hostName}</a>
+                        </div>
+                        <button class="danger" style="width: auto; padding: 5px;" onclick="deleteService('${s.id}', '${key}')">DEL</button>
+                    </div>`;
+            } catch(e) {}
+        }
+        content.innerHTML = html;
+    }
+
     async function createService() {
+        const btn = document.getElementById('provisionBtn');
+        const key = document.getElementById('activeAccount').value;
         const name = document.getElementById('serviceName').value;
         const sub = document.getElementById('subdomain').value;
         const host = document.getElementById('host').value;
 
+        if(!name || !sub || !host) return alert("Fill all fields");
+
+        btn.innerText = "CHECKING LIMITS...";
+        btn.disabled = true;
+
         try {
-            const svc = await fastlyReq('/service', 'POST', { name });
-            const ver = await fastlyReq(`/service/${svc.id}/version`, 'POST');
-            await fastlyReq(`/service/${svc.id}/version/${ver.number}/domain`, 'POST', { name: `${sub}.global.ssl.fastly.net` });
-            await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { name: "Origin", address: host, port: 80 });
-            await fastlyReq(`/service/${svc.id}/version/${ver.number}/activate`, 'PUT');
-            alert("Success: Link Active!");
-            fetchServices();
-        } catch(e) { 
-            alert(`Provisioning Error:\n${e.message}`); 
-        }
-    }
-
-    async function deleteService(id) {
-        if(confirm("Confirm deletion?")) {
-            try {
-                await fastlyReq(`/service/${id}`, 'DELETE');
-                fetchServices();
-            } catch(e) {
-                alert(`Deletion Error:\n${e.message}`);
+            const services = await fastlyReq('/service', 'GET', null, key);
+            if (services.length >= 100) {
+                alert("LIMIT REACHED: This account has 100 links. Please delete existing links or use a new account.");
+                btn.innerText = "🚀 INITIALIZE FASTLY LINK";
+                btn.disabled = false;
+                return;
             }
-        }
-    }
-    
-    function manageService(id) { alert("Edit functionality for Service ID " + id + " to be implemented."); }
 
-    // --- Import/Export (.dnfs) ---
-    function exportData() {
-        const dataStr = JSON.stringify(db, null, 2);
-        const blob = new Blob([dataStr], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `dominum_config_${new Date().getTime()}.dnfs`;
-        a.click();
-        URL.revokeObjectURL(url);
+            btn.innerText = "PROVISIONING...";
+            const svc = await fastlyReq('/service', 'POST', { name }, key);
+            const ver = await fastlyReq(`/service/${svc.id}/version`, 'POST', null, key);
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/domain`, 'POST', { name: `${sub}.global.ssl.fastly.net` }, key);
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { name: "Origin", address: host, port: 80 }, key);
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/activate`, 'PUT', null, key);
+            
+            alert("Success: Link Active!");
+            cache = {};
+            render(); 
+        } catch(e) { alert(`Provisioning Error: ${e.message}`); }
+        
+        btn.innerText = "🚀 INITIALIZE FASTLY LINK";
+        btn.disabled = false;
     }
 
-    function importData(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (e) => {
+    async function deleteService(id, key) {
+        if(confirm("Confirm deletion? This cannot be undone.")) {
             try {
-                const imported = JSON.parse(e.target.result);
-                if (imported.accounts) { db = imported; save(); alert("Import Successful."); }
-            } catch(err) { alert("Invalid .dnfs file."); }
-        };
-        reader.readAsText(file);
+                await fastlyReq(`/service/${id}`, 'DELETE', null, key);
+                alert("Deleted.");
+                document.getElementById('allLinksModal').classList.add('hidden');
+                cache = {}; render();
+            } catch (e) { alert("Deletion failed."); }
+        }
     }
 
     init();
