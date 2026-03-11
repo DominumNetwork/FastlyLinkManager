@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dominum Fastly Manager</title>
+    <title>Dominum Fastly Link Manager</title>
     <style>
         :root {
             --bg: #050505; --text: #00ff41; --accent: #008f11;
@@ -42,6 +42,9 @@
         .close-btn { position: absolute; top: 15px; right: 15px; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem; }
         .spinner { width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #000; border: 1px solid var(--accent); color: var(--text); padding: 15px 25px; z-index: 9999; font-weight: bold; box-shadow: 0 0 15px rgba(0, 143, 17, 0.3); transition: opacity 0.3s; }
+        #toast.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
     </style>
 </head>
 <body>
@@ -67,12 +70,11 @@ __/\\\__________________________________________________________/\\\\___________
        _\/\\\\\\\\\\\\\\\_\/\\\_\/\\\___\/\\\_\/\\\_\///\\\___________\/\\\_____________\/\\\_\//\\\\\\\\/\\_\/\\\___\/\\\_\//\\\\\\\\/\\_\//\\\\\\\\___\//\\\\\\\\\\_\/\\\_________                                          
         _\///////////////__\///__\///____\///__\///____\///____________\///______________\///___\////////\//__\///____\///___\////////\//___\////////_____\//////////__\///__________                                         
                                                              
-  >> FASTLY LINK MANAGER/EDITOR <<  
+  ** FASTLY LINK MANAGER/EDITOR **  
 </pre>
 </header>
 
 <div class="container">
-    
     <div class="panel">
         <h2>[1] ACCOUNT_KEYS_CONFIG</h2>
         <div class="grid">
@@ -93,21 +95,33 @@ __/\\\__________________________________________________________/\\\\___________
     <div class="panel" id="provisionPanel">
         <div id="lock1" class="locked-overlay">ACCESS DENIED: NO ACTIVE ACCOUNTS FOUND</div>
         <h2>[2] PROVISION_NEW_CDN</h2>
-        <select id="activeAccount" onchange="fetchServices()"></select>
+        <select id="activeAccount"></select>
         <div class="grid">
             <input type="text" id="serviceName" placeholder="Service Name">
             <input type="text" id="subdomain" placeholder="Subdomain (no dots)">
         </div>
         <input type="text" id="host" placeholder="Backend Host (origin.example.com)">
-        <button onclick="createService()">🚀 INITIALIZE FASTLY LINK</button>
+        <button id="provisionBtn" onclick="createService()">🚀 INITIALIZE FASTLY LINK</button>
     </div>
 
     <div class="panel" id="managePanel">
         <div id="lock2" class="locked-overlay">ACCESS DENIED: NO ACTIVE ACCOUNTS FOUND</div>
         <h2>[3] LIVE_CDN_MANAGER</h2>
-        <div id="serviceList"></div>
+        <div id="accordionContainer"></div>
     </div>
+</div>
 
+<div id="toast" class="hidden"></div>
+
+<div id="confirmModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 400px; text-align: center; border-color: var(--danger);">
+        <h3 style="color: var(--danger); margin-top: 0;">[!] ACTION REQUIRED</h3>
+        <p id="confirmText" style="margin: 20px 0; color: #fff;"></p>
+        <div class="grid">
+            <button class="secondary" onclick="closeConfirm()">CANCEL</button>
+            <button class="danger" id="confirmYesBtn">CONFIRM</button>
+        </div>
+    </div>
 </div>
 
 <div id="helpModal" class="modal-overlay hidden">
@@ -126,6 +140,7 @@ __/\\\__________________________________________________________/\\\\___________
         </ol>
     </div>
 </div>
+
 <div id="allLinksModal" class="modal-overlay hidden">
     <div class="modal-content">
         <span class="close-btn" onclick="document.getElementById('allLinksModal').classList.add('hidden')">[X]</span>
@@ -136,7 +151,8 @@ __/\\\__________________________________________________________/\\\\___________
 
 <script>
     let db = { accounts: [] };
-    let cache = {};
+    let cache = {}; 
+    let pendingConfirmAction = null;
 
     function init() {
         const saved = localStorage.getItem('dominum_data');
@@ -145,6 +161,30 @@ __/\\\__________________________________________________________/\\\\___________
     }
 
     function save() { localStorage.setItem('dominum_data', JSON.stringify(db)); render(); }
+
+    function showToast(msg, isError = false) {
+        const toast = document.getElementById('toast');
+        toast.className = isError ? 'error' : '';
+        toast.innerText = msg;
+        toast.classList.remove('hidden');
+        setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+    }
+
+    function requireConfirm(msg, action) {
+        document.getElementById('confirmText').innerText = msg;
+        pendingConfirmAction = action;
+        document.getElementById('confirmModal').classList.remove('hidden');
+    }
+    
+    function closeConfirm() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        pendingConfirmAction = null;
+    }
+    
+    document.getElementById('confirmYesBtn').onclick = () => {
+        if (pendingConfirmAction) pendingConfirmAction();
+        closeConfirm();
+    };
 
     function render() {
         const accList = document.getElementById('accountList');
@@ -189,22 +229,28 @@ __/\\\__________________________________________________________/\\\\___________
         const headers = { "Fastly-Key": key, "Accept": "application/json" };
         if (body) headers["Content-Type"] = "application/json";
 
-        const res = await fetch(`/fastly-proxy${endpoint}`, {
-            method, headers, body: body ? JSON.stringify(body) : null
-        });
+        const res = await fetch(`/fastly-proxy${endpoint}`, { method, headers, body: body ? JSON.stringify(body) : null });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
     }
 
     function addAccount() {
-        const name = document.getElementById('accName').value;
-        const key = document.getElementById('accKey').value;
-        if (!name || !key) return alert("Fill all fields.");
+        const name = document.getElementById('accName').value.trim();
+        const key = document.getElementById('accKey').value.trim();
+        if (!name || !key) return showToast("ERROR: Please fill out both the Name and Token fields.", true);
         db.accounts.push({ name, key });
         save();
+        showToast("Account added successfully.");
         document.getElementById('accName').value = ''; document.getElementById('accKey').value = '';
     }
-    function deleteAccount(index) { db.accounts.splice(index, 1); save(); }
+
+    function deleteAccount(index) {
+        requireConfirm(`Delete account "${db.accounts[index].name}"?`, () => {
+            db.accounts.splice(index, 1);
+            save();
+            showToast("Account removed from dashboard.");
+        });
+    }
     
     function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
     function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
@@ -229,10 +275,8 @@ __/\\\__________________________________________________________/\\\\___________
         try {
             const key = db.accounts[index].key;
             const services = await fastlyReq('/service', 'GET', null, key);
-            
             document.getElementById(`count-acc-${index}`).innerText = `(${services.length}/100 Links)`;
-            
-            cache[index] = { data: services, page: 1, totalPages: Math.ceil(services.length / 25) };
+            cache[index] = { data: services, page: 1, totalPages: Math.ceil(services.length / 25) || 1 };
             renderPage(index);
         } catch (e) { listDiv.innerHTML = `<span style="color:var(--danger)">API Error: Invalid token or offline.</span>`; }
     }
@@ -286,10 +330,7 @@ __/\\\__________________________________________________________/\\\\___________
         document.getElementById(`next-btn-${index}`).disabled = state.page === state.totalPages;
     }
 
-    function changePage(index, dir) {
-        cache[index].page += dir;
-        renderPage(index);
-    }
+    function changePage(index, dir) { cache[index].page += dir; renderPage(index); }
 
     async function loadAllModal(index) {
         const modal = document.getElementById('allLinksModal');
@@ -299,7 +340,7 @@ __/\\\__________________________________________________________/\\\\___________
         
         document.getElementById('allLinksTitle').innerText = `ALL LINKS - ${db.accounts[index].name}`;
         modal.classList.remove('hidden');
-        content.innerHTML = `<div class="spinner"></div> Compiling complete list (This may take a moment to prevent rate limits)...`;
+        content.innerHTML = `<div class="spinner"></div> Compiling complete list...`;
 
         let html = "";
         for (const s of state.data) {
@@ -327,21 +368,19 @@ __/\\\__________________________________________________________/\\\\___________
     async function createService() {
         const btn = document.getElementById('provisionBtn');
         const key = document.getElementById('activeAccount').value;
-        const name = document.getElementById('serviceName').value;
-        const sub = document.getElementById('subdomain').value;
-        const host = document.getElementById('host').value;
+        const name = document.getElementById('serviceName').value.trim();
+        const sub = document.getElementById('subdomain').value.trim();
+        const host = document.getElementById('host').value.trim();
 
-        if(!name || !sub || !host) return alert("Fill all fields");
+        if(!name || !sub || !host) return showToast("ERROR: Fill all fields.", true);
 
-        btn.innerText = "CHECKING LIMITS...";
-        btn.disabled = true;
+        btn.innerText = "CHECKING LIMITS..."; btn.disabled = true;
 
         try {
             const services = await fastlyReq('/service', 'GET', null, key);
             if (services.length >= 100) {
-                alert("LIMIT REACHED: This account has 100 links. Please delete existing links or use a new account.");
-                btn.innerText = "🚀 INITIALIZE FASTLY LINK";
-                btn.disabled = false;
+                showToast("LIMIT REACHED: Delete links or use a new account.", true);
+                btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false;
                 return;
             }
 
@@ -352,24 +391,22 @@ __/\\\__________________________________________________________/\\\\___________
             await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { name: "Origin", address: host, port: 80 }, key);
             await fastlyReq(`/service/${svc.id}/version/${ver.number}/activate`, 'PUT', null, key);
             
-            alert("Success: Link Active!");
-            cache = {};
-            render(); 
-        } catch(e) { alert(`Provisioning Error: ${e.message}`); }
+            showToast("Success: Link Active!");
+            cache = {}; render(); 
+        } catch(e) { showToast(`Provisioning Error: ${e.message}`, true); }
         
-        btn.innerText = "🚀 INITIALIZE FASTLY LINK";
-        btn.disabled = false;
+        btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false;
     }
 
-    async function deleteService(id, key) {
-        if(confirm("Confirm deletion? This cannot be undone.")) {
+    function deleteService(id, key) {
+        requireConfirm("Delete this link permanently?", async () => {
             try {
                 await fastlyReq(`/service/${id}`, 'DELETE', null, key);
-                alert("Deleted.");
+                showToast("Link Deleted.");
                 document.getElementById('allLinksModal').classList.add('hidden');
-                cache = {}; render();
-            } catch (e) { alert("Deletion failed."); }
-        }
+                cache = {}; render(); 
+            } catch (e) { showToast("Deletion failed.", true); }
+        });
     }
 
     function exportData() {
@@ -388,19 +425,19 @@ __/\\\__________________________________________________________/\\\\___________
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
+            const content = e.target.result.trim();
             try {
-                const imported = JSON.parse(e.target.result);
+                const imported = JSON.parse(content);
                 if (imported.accounts) {
-                    db = imported;
-                    cache = {};
-                    save();
-                    alert("Import Successful! Dashboard restored.");
+                    db = imported; cache = {}; save();
+                    showToast("Import Successful! Dashboard restored.");
                 } else {
-                    alert("Invalid .dnfs file format.");
+                    showToast("ERROR: Invalid format. Missing 'accounts' array.", true);
                 }
-            } catch(err) { alert("Error parsing .dnfs file."); }
-            
-            event.target.value = '';
+            } catch(err) { 
+                showToast("PARSE ERROR: File must be valid JSON (double quotes).", true);
+            }
+            event.target.value = ''; // Reset input
         };
         reader.readAsText(file);
     }
