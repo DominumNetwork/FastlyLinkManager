@@ -47,7 +47,9 @@
         .pagination-controls button { width: auto; padding: 5px 15px; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .modal-content { background: #050505; border: 1px solid var(--accent); padding: 20px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-content { background: #050505; color: #ffffff; border: 1px solid var(--accent); padding: 20px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .modal-content strong {color: #008f11}
+        .tutB {color: #99ff99}
         .close-btn { position: absolute; top: 15px; right: 15px; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem; }
         .spinner { width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
@@ -195,11 +197,11 @@ __/\\\\\\\\\\\\_________________________________________________________________
         <span class="close-btn" onclick="closeAllModals()">[X]</span>
         <h3>[?] HOW TO USE THE SITE</h3>
         <ol>
-            <li><strong>MAKING/SAVING Accounts:</strong> To make an account, You need to create an account name<strong>(Can be anything)</strong>, and add your personal fastly API Key <strong>(Instructions can be found in the "[?] FINDING YOUR API KEY" Instructions).</strong></li>
-            <li><strong>MAKING A LINK:</strong> To make links, you can make the service name whatever you want, make the subdomain whatever you want<strong>(NO "." WHEN MAKING)</strong>, and set the host to any url you want the site to be. <strong>(Ex: example.com)</strong></li>
+            <li><strong>MAKING/SAVING Accounts:</strong> To make an account, You need to create an account name<b class="tutB">(Can be anything)</b>, and add your personal fastly API Key <b class="tutB">(Instructions can be found in the "[?] FINDING YOUR API KEY" Instructions).</b></li>
+            <li><strong>MAKING A LINK:</strong> To make links, you can make the service name whatever you want, make the subdomain whatever you want<b class="tutB">(NO "." WHEN MAKING)</b>, and set the host to any url you want the site to be. <b class="tutB">(Ex: example.com)</b></li>
             <li><strong>EDITING LINKS:</strong> Editing links is the same process as making a link. Just find the link you made in the dropdown for that account, click edit, and change it how you'd like!</li>
-            <li><strong>DEACTIVATE/REACTIVATE LINKS:</strong> When deactivating a link, find the link you want to deactivate, then press "Deactivate". you will need to retype the service name that you originally set for that link <strong>(It will show in the modal if you forgot it)</strong>. Reactivating is the same process!</li>
-            <li><strong>DELETING LINKS:</strong> When deleting links, you need to first Deactivate it. Afterwards, you can press delete on the link you want removed, and press <strong>"Delete"</strong> if you are 100% sure you want to delete it.</li>
+            <li><strong>DEACTIVATE/REACTIVATE LINKS:</strong> When deactivating a link, find the link you want to deactivate, then press "Deactivate". you will need to retype the service name that you originally set for that link <b class="tutB">(It will show in the modal if you forgot it)</b>. Reactivating is the same process!</li>
+            <li><strong>DELETING LINKS:</strong> When deleting links, you need to first Deactivate it. Afterwards, you can press delete on the link you want removed, and press <b class="tutB">"Delete"</b> if you are 100% sure you want to delete it.</li>
             <li><strong>FINDING MY LINKS:</strong> All links made by you will be located at the bottom of the page, in the dropdown menu for that account.</li>
             <li><strong>SAVING ACCOUNTS/KEYS:</strong> You can export the .dnfs file to save your Accounts and api Keys just in case you need to reset your browser cookies and data, then import the .dnfs file afterward! If you clear browsing data before doing this, you could lose access to your accounts until you make a new api key!</li>
         </ol>
