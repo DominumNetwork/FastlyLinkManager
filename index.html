@@ -372,6 +372,39 @@ __/\\\__________________________________________________________/\\\\___________
         }
     }
 
+    function exportData() {
+        const dataStr = JSON.stringify(db, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dominum_config_${new Date().getTime()}.dnfs`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.accounts) {
+                    db = imported;
+                    cache = {};
+                    save();
+                    alert("Import Successful! Dashboard restored.");
+                } else {
+                    alert("Invalid .dnfs file format.");
+                }
+            } catch(err) { alert("Error parsing .dnfs file."); }
+            
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
     init();
 </script>
 </body>
