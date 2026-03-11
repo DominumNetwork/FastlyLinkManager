@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOMINUM | Fastly CDN Manager</title>
+    <style>
+        :root {
+            --bg: #050505;
+            --text: #00ff41;
+            --accent: #008f11;
+            --border: #222;
+            --danger: #ff4444;
+            --locked: #1a0000;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Courier New', Courier, monospace;
+            margin: 20px;
+        }
+
+        header pre {
+            font-size: 10px; 
+            line-height: 8px;
+            color: var(--accent);
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .container { max-width: 900px; margin: 0 auto; }
+
+        .panel {
+            border: 1px solid var(--border);
+            padding: 15px;
+            margin-bottom: 20px;
+            background: rgba(0, 15, 0, 0.5);
+            position: relative;
+        }
+
+        /* Access Control Styles */
+        .locked-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(10, 0, 0, 0.85);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            font-weight: bold;
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .hidden { display: none !important; }
+
+        h2 { border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size: 1.1rem; color: #fff; }
+
+        input, select, button {
+            background: #111;
+            border: 1px solid var(--accent);
+            color: var(--text);
+            padding: 10px;
+            margin: 5px 0;
+            width: 100%;
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        button { cursor: pointer; text-transform: uppercase; font-weight: bold; }
+        button:hover { background: var(--accent); color: #000; }
+        button.danger { border-color: var(--danger); color: var(--danger); }
+        button.danger:hover { background: var(--danger); color: #fff; }
+        button.secondary { border-color: #555; color: #ccc; }
+        button.text-link { background: none; border: none; color: #aaa; text-transform: none; text-decoration: underline; padding: 5px; text-align: left; width: auto; font-size: 0.85rem; }
+        button.text-link:hover { color: var(--text); background: none; }
+
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .account-tag { background: #111; padding: 5px; border: 1px solid var(--border); margin-bottom: 5px; display: flex; justify-content: space-between;}
+        
+        .service-card { border: 1px solid var(--border); padding: 10px; margin-top: 10px; background: #000; }
+
+        /* Modal Styles */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: #050505;
+            border: 1px solid var(--accent);
+            padding: 20px;
+            max-width: 500px;
+            width: 90%;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 143, 17, 0.2);
+        }
+        .modal-content h3 { margin-top: 0; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+        .modal-content ol { padding-left: 20px; line-height: 1.6; color: #ccc; }
+        .modal-content li strong { color: var(--text); }
+        .close-btn {
+            position: absolute; top: 15px; right: 15px;
+            color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem;
+        }
+        .close-btn:hover { color: #fff; }
+    </style>
+</head>
+<body>
+
+<header>
+<pre>
+__/\\\\\\\\\\\\_______________________________________________________________________________________________________/\\\\\\\\\\\\\\\____________________________________________/\\\\\\____________________________         
+ _\/\\\////////\\\____________________________________________________________________________________________________\/\\\///////////____________________________________________\////\\\____________________________        
+  _\/\\\______\//\\\____________________________________/\\\___________________________________________________________\/\\\_____________________________________________/\\\_________\/\\\_______/\\\__/\\\___________       
+   _\/\\\_______\/\\\_____/\\\\\_______/\\\\\__/\\\\\___\///___/\\/\\\\\\____/\\\____/\\\____/\\\\\__/\\\\\_____________\/\\\\\\\\\\\______/\\\\\\\\\_____/\\\\\\\\\\__/\\\\\\\\\\\____\/\\\______\//\\\/\\\____________      
+    _\/\\\_______\/\\\___/\\\///\\\___/\\\///\\\\\///\\\__/\\\_\/\\\////\\\__\/\\\___\/\\\__/\\\///\\\\\///\\\___________\/\\\///////______\////////\\\___\/\\\//////__\////\\\////_____\/\\\_______\//\\\\\_____________     
+     _\/\\\_______\/\\\__/\\\__\//\\\_\/\\\_\//\\\__\/\\\_\/\\\_\/\\\__\//\\\_\/\\\___\/\\\_\/\\\_\//\\\__\/\\\___________\/\\\_______________/\\\\\\\\\\__\/\\\\\\\\\\____\/\\\_________\/\\\________\//\\\______________    
+      _\/\\\_______/\\\__\//\\\__/\\\__\/\\\__\/\\\__\/\\\_\/\\\_\/\\\___\/\\\_\/\\\___\/\\\_\/\\\__\/\\\__\/\\\___________\/\\\______________/\\\/////\\\__\////////\\\____\/\\\_/\\_____\/\\\_____/\\_/\\\_______________   
+       _\/\\\\\\\\\\\\/____\///\\\\\/___\/\\\__\/\\\__\/\\\_\/\\\_\/\\\___\/\\\_\//\\\\\\\\\__\/\\\__\/\\\__\/\\\___________\/\\\_____________\//\\\\\\\\/\\__/\\\\\\\\\\____\//\\\\\____/\\\\\\\\\_\//\\\\/________________  
+        _\////////////________\/////_____\///___\///___\///__\///__\///____\///___\/////////___\///___\///___\///____________\///_______________\////////\//__\//////////______\/////____\/////////___\////__________________ 
+__/\\\__________________________________________________________/\\\\____________/\\\\_______________________________________________________________________________________                                                 
+ _\/\\\__________________________________/\\\___________________\/\\\\\\________/\\\\\\_______________________________________________________________________________________                                                
+  _\/\\\______________/\\\_______________\/\\\___________________\/\\\//\\\____/\\\//\\\_______________________________________________/\\\\\\\\_______________________________                                               
+   _\/\\\_____________\///___/\\/\\\\\\___\/\\\\\\\\______________\/\\\\///\\\/\\\/_\/\\\__/\\\\\\\\\_____/\\/\\\\\\____/\\\\\\\\\_____/\\\////\\\_____/\\\\\\\\___/\\/\\\\\\\__                                              
+    _\/\\\______________/\\\_\/\\\////\\\__\/\\\////\\\____________\/\\\__\///\\\/___\/\\\_\////////\\\___\/\\\////\\\__\////////\\\___\//\\\\\\\\\___/\\\/////\\\_\/\\\/////\\\_                                             
+     _\/\\\_____________\/\\\_\/\\\__\//\\\_\/\\\\\\\\/_____________\/\\\____\///_____\/\\\___/\\\\\\\\\\__\/\\\__\//\\\___/\\\\\\\\\\___\///////\\\__/\\\\\\\\\\\__\/\\\___\///__                                            
+      _\/\\\_____________\/\\\_\/\\\___\/\\\_\/\\\///\\\_____________\/\\\_____________\/\\\__/\\\/////\\\__\/\\\___\/\\\__/\\\/////\\\___/\\_____\\\_\//\\///////___\/\\\_________                                           
+       _\/\\\\\\\\\\\\\\\_\/\\\_\/\\\___\/\\\_\/\\\_\///\\\___________\/\\\_____________\/\\\_\//\\\\\\\\/\\_\/\\\___\/\\\_\//\\\\\\\\/\\_\//\\\\\\\\___\//\\\\\\\\\\_\/\\\_________                                          
+        _\///////////////__\///__\///____\///__\///____\///____________\///______________\///___\////////\//__\///____\///___\////////\//___\////////_____\//////////__\///__________                                         
+                                                             
+  >> FASTLY LINK MANAGER/EDITOR <<  
+</pre>
+</header>
+
+<div class="container">
+    
+    <div class="panel">
+        <h2>[1] ACCOUNT_KEYS_CONFIG</h2>
+        <div class="grid">
+            <input type="text" id="accName" placeholder="Account Name (e.g. Main_Alt)">
+            <input type="password" id="accKey" placeholder="Fastly API Token">
+        </div>
+        <button onclick="addAccount()">+ ADD ACCOUNT TO LOCALSTORAGE</button>
+        <button class="text-link" onclick="openHelpModal()">[?] How do I find my Fastly API Key?</button>
+        <div id="accountList" style="margin-top:15px;"></div>
+        
+        <div class="grid" style="margin-top:10px;">
+            <button class="secondary" onclick="exportData()">💾 EXPORT .DNFS</button>
+            <button class="secondary" onclick="document.getElementById('importFile').click()">📂 IMPORT .DNFS</button>
+            <input type="file" id="importFile" class="hidden" accept=".dnfs" onchange="importData(event)">
+        </div>
+    </div>
+
+    <div class="panel" id="provisionPanel">
+        <div id="lock1" class="locked-overlay">ACCESS DENIED: NO ACTIVE ACCOUNTS FOUND</div>
+        <h2>[2] PROVISION_NEW_CDN</h2>
+        <select id="activeAccount" onchange="fetchServices()"></select>
+        <div class="grid">
+            <input type="text" id="serviceName" placeholder="Service Name">
+            <input type="text" id="subdomain" placeholder="Subdomain (no dots)">
+        </div>
+        <input type="text" id="host" placeholder="Backend Host (origin.example.com)">
+        <button onclick="createService()">🚀 INITIALIZE FASTLY LINK</button>
+    </div>
+
+    <div class="panel" id="managePanel">
+        <div id="lock2" class="locked-overlay">ACCESS DENIED: NO ACTIVE ACCOUNTS FOUND</div>
+        <h2>[3] LIVE_CDN_MANAGER</h2>
+        <div id="serviceList"></div>
+    </div>
+
+</div>
+
+<div id="helpModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeHelpModal()">[X]</span>
+        <h3>[?] FINDING YOUR API KEY</h3>
+        <ol>
+            <li>Log in to your <strong>Fastly</strong> dashboard. (Make an account if you dont have one)</li>
+            <li>Click the user menu (top right) and select <strong>Account</strong>.</li>
+            <li>In the left sidebar, click the <strong>API tokens</strong> dropdown, and select <strong>Personal tokens</strong>.</li>
+            <li>It may ask you to authenicate. Just input your <strong>email & password</strong>.</li>
+            <li>Click the <strong>Create Token</strong> button.</li>
+            <li>Give it a name, set Scope to <strong>Global</strong>, and Access to <strong>Global API access</strong>.</li>
+            <li>Make sure to change the expiration to <strong>Never expire</strong>, so that it lasts forever!</li>
+            <li>Click <strong>Create Token</strong>. Copy the string provided; it will only be shown once.</li>
+        </ol>
+    </div>
+</div>
+
+<script>
+    let db = {
+        accounts: [],
+        links: []
+    };
+
+    // --- Core Logic ---
+    function init() {
+        const saved = localStorage.getItem('dominum_data');
+        if (saved) db = JSON.parse(saved);
+        render();
+    }
+
+    function save() {
+        localStorage.setItem('dominum_data', JSON.stringify(db));
+        render();
+    }
+
+    function render() {
+        const accList = document.getElementById('accountList');
+        const accSelect = document.getElementById('activeAccount');
+        accList.innerHTML = "";
+        accSelect.innerHTML = "";
+
+        db.accounts.forEach((acc, index) => {
+            accList.innerHTML += `
+                <div class="account-tag">
+                    <span>${acc.name} (****${acc.key.slice(-4)})</span>
+                    <span style="color:red; cursor:pointer;" onclick="deleteAccount(${index})">[DEL]</span>
+                </div>`;
+            accSelect.innerHTML += `<option value="${acc.key}">${acc.name}</option>`;
+        });
+
+        const isLocked = db.accounts.length === 0;
+        document.getElementById('lock1').className = isLocked ? 'locked-overlay' : 'hidden';
+        document.getElementById('lock2').className = isLocked ? 'locked-overlay' : 'hidden';
+
+        if(!isLocked) fetchServices();
+    }
+
+    // --- Modal Logic ---
+    function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
+    function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
+
+    // --- Account Actions ---
+    function addAccount() {
+        const name = document.getElementById('accName').value;
+        const key = document.getElementById('accKey').value;
+        if (!name || !key) return alert("Fill all fields.");
+        db.accounts.push({ name, key });
+        save();
+        document.getElementById('accName').value = '';
+        document.getElementById('accKey').value = '';
+    }
+
+    function deleteAccount(index) {
+        db.accounts.splice(index, 1);
+        save();
+    }
+
+    async function fastlyReq(endpoint, method = 'GET', body = null) {
+        const key = document.getElementById('activeAccount').value;
+        if (!key) throw new Error("No API key selected.");
+        
+        const headers = { "Fastly-Key": key, "Accept": "application/json" };
+        if (body) headers["Content-Type"] = "application/json";
+
+        const res = await fetch(`/fastly-proxy${endpoint}`, {
+            method, headers, body: body ? JSON.stringify(body) : null
+        });
+
+        if (!res.ok) {
+            const errText = await res.text();
+            throw new Error(`HTTP ${res.status}: ${errText}`);
+        }
+        return res.json();
+    }
+
+    async function fetchServices() {
+        const list = document.getElementById('serviceList');
+        list.innerHTML = "<span style='color: #aaa;'>Establishing secure connection to Fastly...</span>";
+        try {
+            const services = await fastlyReq('/service');
+            if (!services) return;
+            
+            list.innerHTML = services.length ? "" : "No active links found for this account.";
+            
+            services.forEach(s => {
+                list.innerHTML += `
+                    <div class="service-card">
+                        <div><strong>${s.name}</strong> <span style="float:right; font-size:0.7rem;">${s.id}</span></div>
+                        <div class="grid" style="margin-top:10px;">
+                            <button onclick="manageService('${s.id}')">EDIT</button>
+                            <button class="danger" onclick="deleteService('${s.id}')">DEACTIVATE/DELETE</button>
+                        </div>
+                    </div>`;
+            });
+        } catch(e) { 
+            console.error(e);
+            list.innerHTML = `
+                <div style="color: var(--danger); border: 1px solid var(--danger); padding: 10px; background: rgba(255,0,0,0.1);">
+                    <strong>[!] CONNECTION FAILED</strong><br><br>
+                    ${e.message}<br><br>
+                    <span style="font-size: 0.8rem; color: #ccc;">
+                        If the error says 'Failed to fetch' or 'NetworkError', your browser is blocking the request due to CORS policies.
+                    </span>
+                </div>`;
+        }
+    }
+
+    async function createService() {
+        const name = document.getElementById('serviceName').value;
+        const sub = document.getElementById('subdomain').value;
+        const host = document.getElementById('host').value;
+
+        try {
+            const svc = await fastlyReq('/service', 'POST', { name });
+            const ver = await fastlyReq(`/service/${svc.id}/version`, 'POST');
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/domain`, 'POST', { name: `${sub}.global.ssl.fastly.net` });
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/backend`, 'POST', { name: "Origin", address: host, port: 80 });
+            await fastlyReq(`/service/${svc.id}/version/${ver.number}/activate`, 'PUT');
+            alert("Success: Link Active!");
+            fetchServices();
+        } catch(e) { 
+            alert(`Provisioning Error:\n${e.message}`); 
+        }
+    }
+
+    async function deleteService(id) {
+        if(confirm("Confirm deletion?")) {
+            try {
+                await fastlyReq(`/service/${id}`, 'DELETE');
+                fetchServices();
+            } catch(e) {
+                alert(`Deletion Error:\n${e.message}`);
+            }
+        }
+    }
+    
+    function manageService(id) { alert("Edit functionality for Service ID " + id + " to be implemented."); }
+
+    // --- Import/Export (.dnfs) ---
+    function exportData() {
+        const dataStr = JSON.stringify(db, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `dominum_config_${new Date().getTime()}.dnfs`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const imported = JSON.parse(e.target.result);
+                if (imported.accounts) { db = imported; save(); alert("Import Successful."); }
+            } catch(err) { alert("Invalid .dnfs file."); }
+        };
+        reader.readAsText(file);
+    }
+
+    init();
+</script>
+</body>
+</html>
