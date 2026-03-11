@@ -7,7 +7,7 @@
     <style>
         :root {
             --bg: #050505; --text: #00ff41; --accent: #008f11;
-            --border: #222; --danger: #ff4444; --locked: #1a0000;
+            --border: #222; --danger: #ff4444; --locked: #1a0000; --warn: #ffaa00;
         }
         body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace; margin: 20px; }
         header pre { font-size: 10px; line-height: 8px; color: var(--accent); text-align: center; margin-bottom: 30px; }
@@ -22,6 +22,8 @@
         button:disabled { border-color: #333; color: #555; cursor: not-allowed; }
         button.danger { border-color: var(--danger); color: var(--danger); }
         button.danger:hover { background: var(--danger); color: #fff; }
+        button.warn { border-color: var(--warn); color: var(--warn); }
+        button.warn:hover { background: var(--warn); color: #000; }
         button.secondary { border-color: #555; color: #ccc; }
         button.text-link { background: none; border: none; color: #aaa; text-transform: none; text-decoration: underline; padding: 5px; text-align: left; width: auto; font-size: 0.85rem; }
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -31,9 +33,16 @@
         .accordion-btn:hover { border-color: var(--accent); }
         .accordion-content { border: 1px solid var(--border); border-top: none; padding: 15px; background: #0a0a0a; }
         
-        .service-card { border: 1px solid #333; padding: 10px; margin-bottom: 10px; background: #000; font-size: 0.9rem; }
+        .service-card { border: 1px solid #333; padding: 15px; margin-bottom: 15px; background: #000; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;}
+        .service-info { flex-grow: 1; }
+        .service-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; max-width: 300px; }
+        .service-actions button { width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
         .service-card a { color: var(--accent); text-decoration: none; }
         .service-card a:hover { text-decoration: underline; }
+        .status-badge { display: inline-block; padding: 2px 6px; font-size: 0.7rem; border-radius: 3px; font-weight: bold; margin-left: 10px; }
+        .status-active { background: var(--accent); color: #000; }
+        .status-inactive { background: #555; color: #fff; }
+
         .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;}
         .pagination-controls button { width: auto; padding: 5px 15px; }
 
@@ -45,6 +54,7 @@
 
         #toast { position: fixed; bottom: 20px; right: 20px; background: #000; border: 1px solid var(--accent); color: var(--text); padding: 15px 25px; z-index: 9999; font-weight: bold; box-shadow: 0 0 15px rgba(0, 143, 17, 0.3); transition: opacity 0.3s; }
         #toast.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
+        #toast.warn { border-color: var(--warn); color: var(--warn); box-shadow: 0 0 15px rgba(255, 170, 0, 0.3); }
     </style>
 </head>
 <body>
@@ -113,37 +123,75 @@ __/\\\__________________________________________________________/\\\\___________
 
 <div id="toast" class="hidden"></div>
 
-<div id="confirmModal" class="modal-overlay hidden">
-    <div class="modal-content" style="max-width: 400px; text-align: center; border-color: var(--danger);">
-        <h3 style="color: var(--danger); margin-top: 0;">[!] ACTION REQUIRED</h3>
-        <p id="confirmText" style="margin: 20px 0; color: #fff;"></p>
-        <div class="grid">
-            <button class="secondary" onclick="closeConfirm()">CANCEL</button>
-            <button class="danger" id="confirmYesBtn">CONFIRM</button>
+<div id="editModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 500px;">
+        <span class="close-btn" onclick="closeAllModals()">[X]</span>
+        <h3 style="color: #fff; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px;">[~] EDIT SERVICE</h3>
+        <p style="color: #aaa; font-size: 0.8rem;">Changes require cloning the active version and redeploying. This takes a moment.</p>
+        
+        <label style="color: var(--accent); font-size: 0.8rem;">Service Name</label>
+        <input type="text" id="editName">
+        
+        <label style="color: var(--accent); font-size: 0.8rem; margin-top:10px; display:block;">Domain (e.g. sub.global.ssl.fastly.net)</label>
+        <input type="text" id="editDomain">
+        
+        <label style="color: var(--accent); font-size: 0.8rem; margin-top:10px; display:block;">Backend Host</label>
+        <input type="text" id="editHost">
+        
+        <button id="editSaveBtn" style="margin-top: 20px;" onclick="submitEdit()">💾 SAVE CHANGES & DEPLOY</button>
+        
+        <div class="grid" style="margin-top: 10px; border-top: 1px solid #333; padding-top: 15px;">
+            <button class="warn" id="editDeactivateBtn" onclick="triggerDeactivateFromEdit()">DEACTIVATE</button>
+            <button class="danger" onclick="triggerDeleteFromEdit()">DELETE SERVICE</button>
+        </div>
+    </div>
+</div>
+
+<div id="deactivateModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 450px; text-align: center; border-color: var(--warn);">
+        <h3 style="color: var(--warn); margin-top: 0;" id="deactivateTitle">[!] CONFIRM DEACTIVATION</h3>
+        <p style="margin: 15px 0; color: #fff;">Are you sure?</p>
+        <p style="color: #ccc; font-size: 0.9rem;" id="deactivateInstructions"></p>
+        <input type="text" id="deactivateInput" placeholder="Type name here to confirm..." oninput="checkDeactivateMatch()" style="text-align: center; font-weight: bold;">
+        <div class="grid" style="margin-top: 20px;">
+            <button class="secondary" onclick="closeAllModals()">CANCEL</button>
+            <button class="warn" id="deactivateConfirmBtn" disabled onclick="executeDeactivateActivate()">CONFIRM</button>
+        </div>
+    </div>
+</div>
+
+<div id="deleteModal" class="modal-overlay hidden">
+    <div class="modal-content" style="max-width: 450px; text-align: center; border-color: var(--danger);">
+        <h3 style="color: var(--danger); margin-top: 0;">[!] DELETE SERVICE</h3>
+        <p style="margin: 15px 0; color: #fff;">This service is currently deactivated.</p>
+        <p style="color: var(--danger); font-weight: bold;">Are you sure you want to delete this service? This cannot be undone!</p>
+        <div class="grid" style="margin-top: 20px;">
+            <button class="secondary" onclick="closeAllModals()">CANCEL</button>
+            <button class="danger" id="deleteConfirmBtn" onclick="executeDelete()">DELETE</button>
         </div>
     </div>
 </div>
 
 <div id="helpModal" class="modal-overlay hidden">
     <div class="modal-content">
-        <span class="close-btn" onclick="closeHelpModal()">[X]</span>
+        <span class="close-btn" onclick="closeAllModals()">[X]</span>
         <h3>[?] FINDING YOUR API KEY</h3>
         <ol>
-            <li>Log in to your <strong>Fastly</strong> dashboard. (Make an account if you dont have one)</li>
+            <li>Log in to your <strong>Fastly</strong> dashboard.</li>
             <li>Click the user menu (top right) and select <strong>Account</strong>.</li>
             <li>In the left sidebar, click the <strong>API tokens</strong> dropdown, and select <strong>Personal tokens</strong>.</li>
             <li>It may ask you to authenicate. Just input your <strong>email & password</strong>.</li>
             <li>Click the <strong>Create Token</strong> button.</li>
             <li>Give it a name, set Scope to <strong>Global</strong>, and Access to <strong>Global API access</strong>.</li>
-            <li>Make sure to change the expiration to <strong>Never expire</strong>, so that it lasts forever!</li>
-            <li>Click <strong>Create Token</strong>. Copy the string provided; it will only be shown once.</li>
+            <li>Make sure to change the expiration to <strong>Never expire</strong>.</li>
+            <li>Click <strong>Create Token</strong>. Copy the string provided.</li>
         </ol>
     </div>
 </div>
 
 <div id="allLinksModal" class="modal-overlay hidden">
     <div class="modal-content">
-        <span class="close-btn" onclick="document.getElementById('allLinksModal').classList.add('hidden')">[X]</span>
+        <span class="close-btn" onclick="closeAllModals()">[X]</span>
         <h3 id="allLinksTitle" style="color: #fff; border-bottom: 1px solid #333; padding-bottom: 10px;">ALL LINKS</h3>
         <div id="allLinksContent"></div>
     </div>
@@ -152,7 +200,12 @@ __/\\\__________________________________________________________/\\\\___________
 <script>
     let db = { accounts: [] };
     let cache = {}; 
-    let pendingConfirmAction = null;
+    
+    // Global state for whatever link is currently being acted upon
+    let currentTarget = {
+        accIndex: null, id: '', key: '', name: '', 
+        domain: '', host: '', backendName: '', isActive: false, version: ''
+    };
 
     function init() {
         const saved = localStorage.getItem('dominum_data');
@@ -162,38 +215,26 @@ __/\\\__________________________________________________________/\\\\___________
 
     function save() { localStorage.setItem('dominum_data', JSON.stringify(db)); render(); }
 
-    function showToast(msg, isError = false) {
+    function showToast(msg, type = '') {
         const toast = document.getElementById('toast');
-        toast.className = isError ? 'error' : '';
+        toast.className = type;
         toast.innerText = msg;
         toast.classList.remove('hidden');
         setTimeout(() => { toast.classList.add('hidden'); }, 4000);
     }
 
-    function requireConfirm(msg, action) {
-        document.getElementById('confirmText').innerText = msg;
-        pendingConfirmAction = action;
-        document.getElementById('confirmModal').classList.remove('hidden');
+    function closeAllModals() {
+        document.querySelectorAll('.modal-overlay').forEach(m => m.classList.add('hidden'));
+        document.getElementById('deactivateInput').value = '';
     }
-    
-    function closeConfirm() {
-        document.getElementById('confirmModal').classList.add('hidden');
-        pendingConfirmAction = null;
-    }
-    
-    document.getElementById('confirmYesBtn').onclick = () => {
-        if (pendingConfirmAction) pendingConfirmAction();
-        closeConfirm();
-    };
 
+    // --- Core UI & Fetch ---
     function render() {
         const accList = document.getElementById('accountList');
         const accSelect = document.getElementById('activeAccount');
         const accContainer = document.getElementById('accordionContainer');
         
-        accList.innerHTML = "";
-        accSelect.innerHTML = "";
-        accContainer.innerHTML = "";
+        accList.innerHTML = ""; accSelect.innerHTML = ""; accContainer.innerHTML = "";
 
         db.accounts.forEach((acc, index) => {
             accList.innerHTML += `
@@ -214,7 +255,6 @@ __/\\\__________________________________________________________/\\\\___________
                         <span id="page-indicator-${index}" style="font-size: 0.8rem; color: #888;">Page 1</span>
                         <button id="next-btn-${index}" class="secondary" onclick="changePage('${index}', 1)">NEXT 25</button>
                     </div>
-                    <button class="secondary" style="margin-top:10px;" onclick="loadAllModal('${index}')">VIEW ALL LINKS IN MODAL</button>
                 </div>
             `;
         });
@@ -237,23 +277,19 @@ __/\\\__________________________________________________________/\\\\___________
     function addAccount() {
         const name = document.getElementById('accName').value.trim();
         const key = document.getElementById('accKey').value.trim();
-        if (!name || !key) return showToast("ERROR: Please fill out both the Name and Token fields.", true);
-        db.accounts.push({ name, key });
-        save();
+        if (!name || !key) return showToast("ERROR: Please fill out both the Name and Token fields.", 'error');
+        db.accounts.push({ name, key }); save();
         showToast("Account added successfully.");
         document.getElementById('accName').value = ''; document.getElementById('accKey').value = '';
     }
 
     function deleteAccount(index) {
-        requireConfirm(`Delete account "${db.accounts[index].name}"?`, () => {
-            db.accounts.splice(index, 1);
-            save();
-            showToast("Account removed from dashboard.");
-        });
+        if(confirm(`Remove account "${db.accounts[index].name}" from your dashboard?`)) {
+            db.accounts.splice(index, 1); save(); showToast("Account removed.");
+        }
     }
     
     function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
-    function closeHelpModal() { document.getElementById('helpModal').classList.add('hidden'); }
 
     async function toggleAccordion(index) {
         const content = document.getElementById(`content-acc-${index}`);
@@ -289,21 +325,21 @@ __/\\\__________________________________________________________/\\\\___________
 
         if (state.data.length === 0) {
             listDiv.innerHTML = "<span style='color:#555;'>No links provisioned on this account.</span>";
-            ctrlDiv.classList.add('hidden');
-            return;
+            ctrlDiv.classList.add('hidden'); return;
         }
 
         listDiv.innerHTML = `<div class="spinner"></div> Extracting Domains & Hosts for Page ${state.page}...`;
         ctrlDiv.classList.add('hidden');
 
         const start = (state.page - 1) * 25;
-        const end = start + 25;
-        const pageServices = state.data.slice(start, end);
+        const pageServices = state.data.slice(start, start + 25);
         let html = "";
 
         for (const s of pageServices) {
             try {
-                const v = s.versions.find(ver => ver.active)?.number || s.versions[0]?.number;
+                const activeObj = s.versions.find(ver => ver.active);
+                const isActive = !!activeObj;
+                const v = activeObj?.number || s.versions[0]?.number;
                 if (!v) continue;
                 
                 const [domRes, bakRes] = await Promise.all([
@@ -311,14 +347,29 @@ __/\\\__________________________________________________________/\\\\___________
                     fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[])
                 ]);
                 
-                const domainName = domRes[0]?.name || "N/A";
-                const hostName = bakRes[0]?.address || "N/A";
+                // Store live fetched data directly into cache object for later use
+                s.fetchedDomain = domRes[0]?.name || "N/A";
+                s.fetchedHost = bakRes[0]?.address || "N/A";
+                s.fetchedBackendName = bakRes[0]?.name || "";
+                s.liveVersion = v;
+                s.isActive = isActive;
+
+                const statusHTML = isActive ? '<span class="status-badge status-active">ACTIVE</span>' : '<span class="status-badge status-inactive">INACTIVE</span>';
+                const actBtnText = isActive ? 'DEACTIVATE' : 'REACTIVATE';
+                const actBtnClass = isActive ? 'warn' : 'secondary';
 
                 html += `
                     <div class="service-card">
-                        <strong style="color: #fff;">${s.name}</strong> <br>
-                        <span style="color:#aaa;">Domain:</span> <a href="https://${domainName}" target="_blank">${domainName}</a><br>
-                        <span style="color:#aaa;">Host:</span> <a href="http://${hostName}" target="_blank">${hostName}</a>
+                        <div class="service-info">
+                            <strong style="color: #fff; font-size: 1.1rem;">${s.name}</strong> ${statusHTML}<br>
+                            <span style="color:#aaa;">Domain:</span> <a href="https://${s.fetchedDomain}" target="_blank">${s.fetchedDomain}</a><br>
+                            <span style="color:#aaa;">Host:</span> <a href="http://${s.fetchedHost}" target="_blank">${s.fetchedHost}</a>
+                        </div>
+                        <div class="service-actions">
+                            <button onclick="openEdit(${index}, '${s.id}')">EDIT</button>
+                            <button class="${actBtnClass}" onclick="initDeactivateActivate(${index}, '${s.id}')">${actBtnText}</button>
+                            <button class="danger" onclick="initDelete(${index}, '${s.id}')">DELETE</button>
+                        </div>
                     </div>`;
             } catch (e) {}
         }
@@ -331,40 +382,137 @@ __/\\\__________________________________________________________/\\\\___________
     }
 
     function changePage(index, dir) { cache[index].page += dir; renderPage(index); }
-
-    async function loadAllModal(index) {
-        const modal = document.getElementById('allLinksModal');
-        const content = document.getElementById('allLinksContent');
-        const state = cache[index];
-        const key = db.accounts[index].key;
-        
-        document.getElementById('allLinksTitle').innerText = `ALL LINKS - ${db.accounts[index].name}`;
-        modal.classList.remove('hidden');
-        content.innerHTML = `<div class="spinner"></div> Compiling complete list...`;
-
-        let html = "";
-        for (const s of state.data) {
-            try {
-                const v = s.versions.find(ver => ver.active)?.number || s.versions[0]?.number;
-                if(!v) continue;
-                const domRes = await fastlyReq(`/service/${s.id}/version/${v}/domain`, 'GET', null, key).catch(()=>[]);
-                const bakRes = await fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[]);
-                const domainName = domRes[0]?.name || "N/A";
-                const hostName = bakRes[0]?.address || "N/A";
-
-                html += `
-                    <div class="service-card" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong>${s.name}</strong><br>
-                            <a href="https://${domainName}" target="_blank">${domainName}</a> -> <a href="http://${hostName}" target="_blank">${hostName}</a>
-                        </div>
-                        <button class="danger" style="width: auto; padding: 5px;" onclick="deleteService('${s.id}', '${key}')">DEL</button>
-                    </div>`;
-            } catch(e) {}
-        }
-        content.innerHTML = html;
+    
+    // --- Set Target Helper ---
+    function setTarget(accIndex, serviceId) {
+        const s = cache[accIndex].data.find(x => x.id === serviceId);
+        currentTarget = {
+            accIndex: accIndex, id: s.id, key: db.accounts[accIndex].key, name: s.name, 
+            domain: s.fetchedDomain, host: s.fetchedHost, backendName: s.fetchedBackendName, 
+            isActive: s.isActive, version: s.liveVersion
+        };
     }
 
+    // --- Action UI Triggers ---
+    function openEdit(accIndex, serviceId) {
+        setTarget(accIndex, serviceId);
+        document.getElementById('editName').value = currentTarget.name;
+        document.getElementById('editDomain').value = currentTarget.domain;
+        document.getElementById('editHost').value = currentTarget.host;
+        
+        const deacBtn = document.getElementById('editDeactivateBtn');
+        deacBtn.innerText = currentTarget.isActive ? "DEACTIVATE" : "REACTIVATE";
+        deacBtn.className = currentTarget.isActive ? "warn" : "secondary";
+        
+        document.getElementById('editModal').classList.remove('hidden');
+    }
+
+    function initDeactivateActivate(accIndex, serviceId) {
+        setTarget(accIndex, serviceId);
+        triggerDeactivateFromEdit(); // Reusing the setup logic
+    }
+
+    function triggerDeactivateFromEdit() {
+        closeAllModals();
+        const action = currentTarget.isActive ? "DEACTIVATE" : "REACTIVATE";
+        document.getElementById('deactivateTitle').innerText = `[!] CONFIRM ${action}`;
+        document.getElementById('deactivateInstructions').innerHTML = `If you are 100% sure you want to ${action.toLowerCase()} this service, Type <b>${currentTarget.name}</b> and press confirm.`;
+        document.getElementById('deactivateConfirmBtn').innerText = action;
+        document.getElementById('deactivateModal').classList.remove('hidden');
+    }
+
+    function initDelete(accIndex, serviceId) {
+        setTarget(accIndex, serviceId);
+        triggerDeleteFromEdit();
+    }
+
+    function triggerDeleteFromEdit() {
+        if (currentTarget.isActive) {
+            showToast("ERROR: You must deactivate the link before deleting it.", 'error');
+            return;
+        }
+        closeAllModals();
+        document.getElementById('deleteModal').classList.remove('hidden');
+    }
+
+    function checkDeactivateMatch() {
+        const input = document.getElementById('deactivateInput').value;
+        document.getElementById('deactivateConfirmBtn').disabled = (input !== currentTarget.name);
+    }
+
+    // --- API Executions ---
+    async function submitEdit() {
+        const btn = document.getElementById('editSaveBtn');
+        const newName = document.getElementById('editName').value.trim();
+        const newDomain = document.getElementById('editDomain').value.trim();
+        const newHost = document.getElementById('editHost').value.trim();
+        
+        if (!newName || !newDomain || !newHost) return showToast("All fields required.", "error");
+
+        btn.innerText = "CLONING & SAVING..."; btn.disabled = true;
+
+        try {
+            // 1. Clone version
+            const clone = await fastlyReq(`/service/${currentTarget.id}/version/${currentTarget.version}/clone`, 'PUT', null, currentTarget.key);
+            const nv = clone.number;
+
+            // 2. Update Service Name
+            if (newName !== currentTarget.name) await fastlyReq(`/service/${currentTarget.id}`, 'PUT', {name: newName}, currentTarget.key);
+            
+            // 3. Update Domain
+            if (newDomain !== currentTarget.domain && currentTarget.domain !== "N/A") {
+                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/domain/${currentTarget.domain}`, 'PUT', {name: newDomain}, currentTarget.key);
+            } else if (newDomain && currentTarget.domain === "N/A") {
+                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/domain`, 'POST', {name: newDomain}, currentTarget.key);
+            }
+
+            // 4. Update Backend
+            if (newHost !== currentTarget.host && currentTarget.backendName) {
+                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/backend/${currentTarget.backendName}`, 'PUT', {address: newHost}, currentTarget.key);
+            }
+
+            // 5. Reactivate if it was live
+            if (currentTarget.isActive) {
+                await fastlyReq(`/service/${currentTarget.id}/version/${nv}/activate`, 'PUT', null, currentTarget.key);
+            }
+
+            showToast("Updates deployed successfully!");
+            closeAllModals();
+            cache[currentTarget.accIndex] = null; // force reload
+            renderPage(currentTarget.accIndex);
+        } catch(e) { showToast(`Edit Error: ${e.message}`, 'error'); }
+        
+        btn.innerText = "💾 SAVE CHANGES & DEPLOY"; btn.disabled = false;
+    }
+
+    async function executeDeactivateActivate() {
+        const btn = document.getElementById('deactivateConfirmBtn');
+        btn.disabled = true; btn.innerText = "PROCESSING...";
+        try {
+            const actionEndpoint = currentTarget.isActive ? 'deactivate' : 'activate';
+            await fastlyReq(`/service/${currentTarget.id}/version/${currentTarget.version}/${actionEndpoint}`, 'PUT', null, currentTarget.key);
+            showToast(`Service successfully ${currentTarget.isActive ? 'deactivated' : 'reactivated'}.`, 'warn');
+            closeAllModals();
+            
+            cache[currentTarget.accIndex] = null; // Clear cache to reflect new active/inactive state visually
+            renderPage(currentTarget.accIndex); 
+        } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+    }
+
+    async function executeDelete() {
+        const btn = document.getElementById('deleteConfirmBtn');
+        btn.disabled = true; btn.innerText = "DELETING...";
+        try {
+            await fastlyReq(`/service/${currentTarget.id}`, 'DELETE', null, currentTarget.key);
+            showToast("Service permanently deleted.");
+            closeAllModals();
+            cache[currentTarget.accIndex] = null;
+            renderPage(currentTarget.accIndex);
+        } catch (e) { showToast(`Delete Error: ${e.message}`, 'error'); }
+        btn.disabled = false; btn.innerText = "DELETE";
+    }
+
+    // --- Create & File Actions ---
     async function createService() {
         const btn = document.getElementById('provisionBtn');
         const key = document.getElementById('activeAccount').value;
@@ -372,16 +520,14 @@ __/\\\__________________________________________________________/\\\\___________
         const sub = document.getElementById('subdomain').value.trim();
         const host = document.getElementById('host').value.trim();
 
-        if(!name || !sub || !host) return showToast("ERROR: Fill all fields.", true);
+        if(!name || !sub || !host) return showToast("ERROR: Fill all fields.", 'error');
 
         btn.innerText = "CHECKING LIMITS..."; btn.disabled = true;
-
         try {
             const services = await fastlyReq('/service', 'GET', null, key);
             if (services.length >= 100) {
-                showToast("LIMIT REACHED: Delete links or use a new account.", true);
-                btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false;
-                return;
+                showToast("LIMIT REACHED: Delete links or use a new account.", 'error');
+                btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false; return;
             }
 
             btn.innerText = "PROVISIONING...";
@@ -393,20 +539,8 @@ __/\\\__________________________________________________________/\\\\___________
             
             showToast("Success: Link Active!");
             cache = {}; render(); 
-        } catch(e) { showToast(`Provisioning Error: ${e.message}`, true); }
-        
+        } catch(e) { showToast(`Provisioning Error: ${e.message}`, 'error'); }
         btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false;
-    }
-
-    function deleteService(id, key) {
-        requireConfirm("Delete this link permanently?", async () => {
-            try {
-                await fastlyReq(`/service/${id}`, 'DELETE', null, key);
-                showToast("Link Deleted.");
-                document.getElementById('allLinksModal').classList.add('hidden');
-                cache = {}; render(); 
-            } catch (e) { showToast("Deletion failed.", true); }
-        });
     }
 
     function exportData() {
@@ -414,9 +548,7 @@ __/\\\__________________________________________________________/\\\\___________
         const blob = new Blob([dataStr], { type: "application/json" });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `dominum_config_${new Date().getTime()}.dnfs`;
-        a.click();
+        a.href = url; a.download = `dominum_config_${new Date().getTime()}.dnfs`; a.click();
         URL.revokeObjectURL(url);
     }
 
@@ -425,19 +557,14 @@ __/\\\__________________________________________________________/\\\\___________
         if (!file) return;
         const reader = new FileReader();
         reader.onload = (e) => {
-            const content = e.target.result.trim();
             try {
-                const imported = JSON.parse(content);
+                const imported = JSON.parse(e.target.result.trim());
                 if (imported.accounts) {
                     db = imported; cache = {}; save();
                     showToast("Import Successful! Dashboard restored.");
-                } else {
-                    showToast("ERROR: Invalid format. Missing 'accounts' array.", true);
-                }
-            } catch(err) { 
-                showToast("PARSE ERROR: File must be valid JSON (double quotes).", true);
-            }
-            event.target.value = ''; // Reset input
+                } else { showToast("ERROR: Invalid format. Missing 'accounts' array.", 'error'); }
+            } catch(err) { showToast("PARSE ERROR: File must be valid JSON.", 'error'); }
+            event.target.value = '';
         };
         reader.readAsText(file);
     }
