@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/fastly-proxy/:match*",
+      "destination": "https://api.fastly.com/:match*"
+    }
+  ]
+}
