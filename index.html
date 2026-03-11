@@ -86,13 +86,14 @@ __/\\\\\\\\\\\\_________________________________________________________________
 
 <div class="container">
     <div class="panel">
-        <h2>[1] ACCOUNT_KEYS_CONFIG</h2>
+        <h2>[1] ACCOUNTS</h2>
         <div class="grid">
             <input type="text" id="accName" placeholder="Account Name (e.g. Main_Alt)">
             <input type="password" id="accKey" placeholder="Fastly API Token">
         </div>
         <button onclick="addAccount()">+ ADD ACCOUNT TO LOCALSTORAGE</button>
         <button class="text-link" onclick="openHelpModal()">[?] How do I find my Fastly API Key?</button>
+        <button class="text-link" onclick="openTutorialModal()">[?] How do I use this site?</button>
         <div id="accountList" style="margin-top:15px;"></div>
         
         <div class="grid" style="margin-top:10px;">
@@ -104,14 +105,14 @@ __/\\\\\\\\\\\\_________________________________________________________________
 
     <div class="panel" id="provisionPanel">
         <div id="lock1" class="locked-overlay">ACCESS DENIED: NO ACTIVE ACCOUNTS FOUND</div>
-        <h2>[2] PROVISION_NEW_CDN</h2>
+        <h2>[2] NEW LINK</h2>
         <select id="activeAccount"></select>
         <div class="grid">
             <input type="text" id="serviceName" placeholder="Service Name">
             <input type="text" id="subdomain" placeholder="Subdomain (no dots)">
         </div>
         <input type="text" id="host" placeholder="Backend Host (origin.example.com)">
-        <button id="provisionBtn" onclick="createService()">🚀 INITIALIZE FASTLY LINK</button>
+        <button id="provisionBtn" onclick="createService()">🚀 CREATE FASTLY LINK</button>
     </div>
 
     <div class="panel" id="managePanel">
@@ -185,6 +186,22 @@ __/\\\\\\\\\\\\_________________________________________________________________
             <li>Give it a name, set Scope to <strong>Global</strong>, and Access to <strong>Global API access</strong>.</li>
             <li>Make sure to change the expiration to <strong>Never expire</strong>.</li>
             <li>Click <strong>Create Token</strong>. Copy the string provided.</li>
+        </ol>
+    </div>
+</div>
+
+<div id="tutorialModal" class="modal-overlay hidden">
+    <div class="modal-content">
+        <span class="close-btn" onclick="closeAllModals()">[X]</span>
+        <h3>[?] HOW TO USE THE SITE</h3>
+        <ol>
+            <li><strong>MAKING/SAVING Accounts:</strong> To make an account, You need to create an account name<strong>(Can be anything)</strong>, and add your personal fastly API Key <strong>(Instructions can be found in the "[?] FINDING YOUR API KEY" Instructions).</strong></li>
+            <li><strong>MAKING A LINK:</strong> To make links, you can make the service name whatever you want, make the subdomain whatever you want<strong>(NO "." WHEN MAKING)</strong>, and set the host to any url you want the site to be. <strong>(Ex: example.com)</strong></li>
+            <li><strong>EDITING LINKS:</strong> Editing links is the same process as making a link. Just find the link you made in the dropdown for that account, click edit, and change it how you'd like!</li>
+            <li><strong>DEACTIVATE/REACTIVATE LINKS:</strong> When deactivating a link, find the link you want to deactivate, then press "Deactivate". you will need to retype the service name that you originally set for that link <strong>(It will show in the modal if you forgot it)</strong>. Reactivating is the same process!</li>
+            <li><strong>DELETING LINKS:</strong> When deleting links, you need to first Deactivate it. Afterwards, you can press delete on the link you want removed, and press <strong>"Delete"</strong> if you are 100% sure you want to delete it.</li>
+            <li><strong>FINDING MY LINKS:</strong> All links made by you will be located at the bottom of the page, in the dropdown menu for that account.</li>
+            <li><strong>SAVING ACCOUNTS/KEYS:</strong> You can export the .dnfs file to save your Accounts and api Keys just in case you need to reset your browser cookies and data, then import the .dnfs file afterward! If you clear browsing data before doing this, you could lose access to your accounts until you make a new api key!</li>
         </ol>
     </div>
 </div>
@@ -282,6 +299,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
     }
     
     function openHelpModal() { document.getElementById('helpModal').classList.remove('hidden'); }
+    function openTutorialModal() { document.getElementById('tutorialModal').classList.remove('hidden'); }
 
     async function toggleAccordion(index) {
         const content = document.getElementById(`content-acc-${index}`);
@@ -339,7 +357,6 @@ __/\\\\\\\\\\\\_________________________________________________________________
                     fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[])
                 ]);
                 
-                // Store live fetched data directly into cache object for later use
                 s.fetchedDomain = domRes[0]?.name || "N/A";
                 s.fetchedHost = bakRes[0]?.address || "N/A";
                 s.fetchedBackendName = bakRes[0]?.name || "";
@@ -375,7 +392,6 @@ __/\\\\\\\\\\\\_________________________________________________________________
 
     function changePage(index, dir) { cache[index].page += dir; renderPage(index); }
     
-    // --- Set Target Helper ---
     function setTarget(accIndex, serviceId) {
         const s = cache[accIndex].data.find(x => x.id === serviceId);
         currentTarget = {
@@ -385,7 +401,6 @@ __/\\\\\\\\\\\\_________________________________________________________________
         };
     }
 
-    // --- Action UI Triggers ---
     function openEdit(accIndex, serviceId) {
         setTarget(accIndex, serviceId);
         document.getElementById('editName').value = currentTarget.name;
@@ -488,7 +503,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
             showToast(`Service successfully ${currentTarget.isActive ? 'deactivated' : 'reactivated'}.`, 'warn');
             closeAllModals();
             
-            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new data and auto-renders
+            fetchServicesForAccount(currentTarget.accIndex);
         } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
     }
 
@@ -500,7 +515,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
             showToast("Service permanently deleted.");
             closeAllModals();
             
-            fetchServicesForAccount(currentTarget.accIndex); // FIX: Fetches new list, removing the deleted item
+            fetchServicesForAccount(currentTarget.accIndex);
         } catch (e) { showToast(`Delete Error: ${e.message}`, 'error'); }
         btn.disabled = false; btn.innerText = "DELETE";
     }
@@ -521,7 +536,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
             const services = await fastlyReq('/service', 'GET', null, key);
             if (services.length >= 100) {
                 showToast("LIMIT REACHED: Delete links or use a new account.", 'error');
-                btn.innerText = "🚀 INITIALIZE FASTLY LINK"; btn.disabled = false; return;
+                btn.innerText = "🚀 CREATE FASTLY LINK"; btn.disabled = false; return;
             }
 
             btn.innerText = "PROVISIONING...";
