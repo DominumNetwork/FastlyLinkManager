@@ -3,108 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DOMINUM | Fastly CDN Manager</title>
+    <title>Dominum Fastly Manager</title>
     <style>
         :root {
-            --bg: #050505;
-            --text: #00ff41;
-            --accent: #008f11;
-            --border: #222;
-            --danger: #ff4444;
-            --locked: #1a0000;
+            --bg: #050505; --text: #00ff41; --accent: #008f11;
+            --border: #222; --danger: #ff4444; --locked: #1a0000;
         }
-
-        body {
-            background-color: var(--bg);
-            color: var(--text);
-            font-family: 'Courier New', Courier, monospace;
-            margin: 20px;
-        }
-
-        header pre {
-            font-size: 10px; 
-            line-height: 8px;
-            color: var(--accent);
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
+        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace; margin: 20px; }
+        header pre { font-size: 10px; line-height: 8px; color: var(--accent); text-align: center; margin-bottom: 30px; }
         .container { max-width: 900px; margin: 0 auto; }
-
-        .panel {
-            border: 1px solid var(--border);
-            padding: 15px;
-            margin-bottom: 20px;
-            background: rgba(0, 15, 0, 0.5);
-            position: relative;
-        }
-
-        /* Access Control Styles */
-        .locked-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(10, 0, 0, 0.85);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            font-weight: bold;
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
-
+        .panel { border: 1px solid var(--border); padding: 15px; margin-bottom: 20px; background: rgba(0, 15, 0, 0.5); position: relative; }
+        .locked-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; color: var(--danger); border: 1px solid var(--danger); }
         .hidden { display: none !important; }
-
-        h2 { border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size: 1.1rem; color: #fff; }
-
-        input, select, button {
-            background: #111;
-            border: 1px solid var(--accent);
-            color: var(--text);
-            padding: 10px;
-            margin: 5px 0;
-            width: 100%;
-            box-sizing: border-box;
-            outline: none;
-        }
-
+        h2 { border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size: 1.1rem; color: #fff; margin-top: 0;}
+        input, select, button { background: #111; border: 1px solid var(--accent); color: var(--text); padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
         button { cursor: pointer; text-transform: uppercase; font-weight: bold; }
-        button:hover { background: var(--accent); color: #000; }
+        button:hover:not(:disabled) { background: var(--accent); color: #000; }
+        button:disabled { border-color: #333; color: #555; cursor: not-allowed; }
         button.danger { border-color: var(--danger); color: var(--danger); }
         button.danger:hover { background: var(--danger); color: #fff; }
         button.secondary { border-color: #555; color: #ccc; }
         button.text-link { background: none; border: none; color: #aaa; text-transform: none; text-decoration: underline; padding: 5px; text-align: left; width: auto; font-size: 0.85rem; }
-        button.text-link:hover { color: var(--text); background: none; }
-
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
         .account-tag { background: #111; padding: 5px; border: 1px solid var(--border); margin-bottom: 5px; display: flex; justify-content: space-between;}
         
-        .service-card { border: 1px solid var(--border); padding: 10px; margin-top: 10px; background: #000; }
+        .accordion-btn { background: #111; border: 1px solid var(--border); color: #fff; text-align: left; padding: 12px; font-size: 1rem; margin-top: 10px; transition: 0.2s; }
+        .accordion-btn:hover { border-color: var(--accent); }
+        .accordion-content { border: 1px solid var(--border); border-top: none; padding: 15px; background: #0a0a0a; }
+        
+        .service-card { border: 1px solid #333; padding: 10px; margin-bottom: 10px; background: #000; font-size: 0.9rem; }
+        .service-card a { color: var(--accent); text-decoration: none; }
+        .service-card a:hover { text-decoration: underline; }
+        .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;}
+        .pagination-controls button { width: auto; padding: 5px 15px; }
 
-        /* Modal Styles */
-        .modal-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 100;
-        }
-        .modal-content {
-            background: #050505;
-            border: 1px solid var(--accent);
-            padding: 20px;
-            max-width: 500px;
-            width: 90%;
-            position: relative;
-            box-shadow: 0 0 20px rgba(0, 143, 17, 0.2);
-        }
-        .modal-content h3 { margin-top: 0; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .modal-content ol { padding-left: 20px; line-height: 1.6; color: #ccc; }
-        .modal-content li strong { color: var(--text); }
-        .close-btn {
-            position: absolute; top: 15px; right: 15px;
-            color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem;
-        }
-        .close-btn:hover { color: #fff; }
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: #050505; border: 1px solid var(--accent); padding: 20px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
+        .close-btn { position: absolute; top: 15px; right: 15px; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem; }
+        .spinner { width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px;}
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
