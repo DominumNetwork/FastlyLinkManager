@@ -6,57 +6,70 @@
     <title>Dominum Fastly Link Manager</title>
     <style>
         :root {
-            --bg: #050505; --text: #00ff41; --accent: #008f11;
-            --border: #222; --danger: #ff4444; --locked: #1a0000; --warn: #ffaa00;
+            --bg: #070707; --text: #d1d5db; --accent: #00ff41;
+            --border: #2a2a2a; --danger: #ef4444; --locked: #1a0000; --warn: #f59e0b;
+            --panel-bg: #0f0f11; --card-bg: #141416;
         }
-        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace; margin: 20px; }
-        header pre { font-size: 10px; line-height: 8px; color: var(--accent); text-align: center; margin-bottom: 30px; }
-        .container { max-width: 900px; margin: 0 auto; }
-        .panel { border: 1px solid var(--border); padding: 15px; margin-bottom: 20px; background: rgba(0, 15, 0, 0.5); position: relative; }
-        .locked-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(10, 0, 0, 0.85); display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; color: var(--danger); border: 1px solid var(--danger); }
-        .hidden { display: none !important; }
-        h2 { border-bottom: 1px solid var(--border); padding-bottom: 5px; font-size: 1.1rem; color: #fff; margin-top: 0;}
-        input, select, button { background: #111; border: 1px solid var(--accent); color: var(--text); padding: 10px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; }
-        button { cursor: pointer; text-transform: uppercase; font-weight: bold; }
-        button:hover:not(:disabled) { background: var(--accent); color: #000; }
-        button:disabled { border-color: #333; color: #555; cursor: not-allowed; }
-        button.danger { border-color: var(--danger); color: var(--danger); }
-        button.danger:hover { background: var(--danger); color: #fff; }
-        button.warn { border-color: var(--warn); color: var(--warn); }
-        button.warn:hover { background: var(--warn); color: #000; }
-        button.secondary { border-color: #555; color: #ccc; }
-        button.text-link { background: none; border: none; color: #aaa; text-transform: none; text-decoration: underline; padding: 5px; text-align: left; width: auto; font-size: 0.85rem; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
-        .account-tag { background: #111; padding: 5px; border: 1px solid var(--border); margin-bottom: 5px; display: flex; justify-content: space-between;}
+        body { background-color: var(--bg); color: var(--text); font-family: 'Courier New', Courier, monospace; margin: 20px; line-height: 1.5; }
+        header pre { font-size: 10px; line-height: 8px; color: var(--accent); text-align: center; margin-bottom: 30px; text-shadow: 0 0 5px rgba(0,255,65,0.3); }
+        .container { max-width: 950px; margin: 0 auto; }
         
-        .accordion-btn { background: #111; border: 1px solid var(--border); color: #fff; text-align: left; padding: 12px; font-size: 1rem; margin-top: 10px; transition: 0.2s; }
-        .accordion-btn:hover { border-color: var(--accent); }
-        .accordion-content { border: 1px solid var(--border); border-top: none; padding: 15px; background: #0a0a0a; }
-        
-        .service-card { border: 1px solid #333; padding: 15px; margin-bottom: 15px; background: #000; font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center;}
+        .panel { border: 1px solid var(--border); border-radius: 8px; padding: 20px; margin-bottom: 20px; background: var(--panel-bg); position: relative; box-shadow: 0 4px 15px rgba(0,0,0,0.4); }
+        .service-card { border: 1px solid #333; border-radius: 6px; padding: 15px; margin-bottom: 12px; background: var(--card-bg); font-size: 0.9rem; display: flex; justify-content: space-between; align-items: center; transition: border-color 0.2s ease, transform 0.1s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .service-card:hover { border-color: #555; }
         .service-info { flex-grow: 1; }
-        .service-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; max-width: 300px; }
-        .service-actions button { width: auto; padding: 5px 10px; font-size: 0.8rem; margin: 0; }
+        .service-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; max-width: 320px; }
+        .service-actions button { width: auto; padding: 6px 12px; font-size: 0.8rem; margin: 0; }
+        
+        .locked-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(5, 5, 5, 0.9); display: flex; align-items: center; justify-content: center; z-index: 10; font-weight: bold; color: var(--danger); border: 1px solid var(--danger); border-radius: 8px; }
+        .hidden { display: none !important; }
+        h2 { border-bottom: 1px solid var(--border); padding-bottom: 8px; font-size: 1.2rem; color: #fff; margin-top: 0; margin-bottom: 15px;}
+        
+        input, select, button { background: #111; border: 1px solid #444; border-radius: 4px; color: #fff; padding: 10px 12px; margin: 5px 0; width: 100%; box-sizing: border-box; outline: none; transition: all 0.2s ease; font-family: inherit; }
+        input:focus, select:focus { border-color: var(--accent); box-shadow: 0 0 8px rgba(0, 255, 65, 0.15); }
+        button { cursor: pointer; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px; border-color: var(--accent); color: var(--accent); background: rgba(0, 255, 65, 0.05); }
+        button:hover:not(:disabled) { background: var(--accent); color: #000; box-shadow: 0 0 10px rgba(0,255,65,0.3); }
+        button:disabled { border-color: #333; color: #666; background: #111; cursor: not-allowed; box-shadow: none; }
+        
+        button.danger { border-color: var(--danger); color: var(--danger); background: rgba(239, 68, 68, 0.05); }
+        button.danger:hover { background: var(--danger); color: #fff; box-shadow: 0 0 10px rgba(239, 68, 68, 0.3); }
+        button.warn { border-color: var(--warn); color: var(--warn); background: rgba(245, 158, 11, 0.05); }
+        button.warn:hover { background: var(--warn); color: #000; box-shadow: 0 0 10px rgba(245, 158, 11, 0.3); }
+        button.secondary { border-color: #555; color: #aaa; background: rgba(255,255,255,0.02); }
+        button.secondary:hover { border-color: #888; color: #fff; background: #222; box-shadow: none;}
+        button.text-link { background: none; border: none; color: #888; text-transform: none; text-decoration: underline; padding: 5px; text-align: left; width: auto; font-size: 0.85rem; }
+        button.text-link:hover { color: var(--accent); background: none; box-shadow: none; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .controls-bar { display: flex; gap: 10px; margin-bottom: 15px; background: #0a0a0a; padding: 12px; border-radius: 6px; border: 1px solid var(--border); align-items: center; }
+        .controls-bar input { margin: 0; flex-grow: 1; }
+        .controls-bar select { margin: 0; width: auto; min-width: 130px; }
+        
+        .account-tag { background: #111; padding: 10px; border-radius: 6px; border: 1px solid var(--border); margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .accordion-btn { background: #111; border: 1px solid var(--border); color: #fff; text-align: left; padding: 14px; font-size: 1rem; margin-top: 10px; }
+        .accordion-content { border: 1px solid var(--border); border-top: none; padding: 20px; background: #0a0a0c; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
+        
         .service-card a { color: var(--accent); text-decoration: none; }
         .service-card a:hover { text-decoration: underline; }
-        .status-badge { display: inline-block; padding: 2px 6px; font-size: 0.7rem; border-radius: 3px; font-weight: bold; margin-left: 10px; }
-        .status-active { background: var(--accent); color: #000; }
-        .status-inactive { background: #555; color: #fff; }
+        .status-badge { display: inline-block; padding: 3px 8px; font-size: 0.7rem; border-radius: 4px; font-weight: bold; margin-left: 10px; letter-spacing: 0.5px; }
+        .status-active { background: rgba(0, 255, 65, 0.2); color: var(--accent); border: 1px solid var(--accent); }
+        .status-inactive { background: rgba(255, 255, 255, 0.1); color: #aaa; border: 1px solid #555; }
 
-        .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; border-top: 1px solid var(--border); padding-top: 10px;}
-        .pagination-controls button { width: auto; padding: 5px 15px; }
+        .pagination-controls { display: flex; justify-content: space-between; align-items: center; margin-top: 20px; border-top: 1px solid var(--border); padding-top: 15px; }
+        .pagination-controls button { width: auto; padding: 8px 20px; }
 
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .modal-content { background: #050505; color: #ffffff; border: 1px solid var(--accent); padding: 20px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; }
-        .modal-content strong {color: #008f11}
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(3px); display: flex; align-items: center; justify-content: center; z-index: 100; }
+        .modal-content { background: var(--panel-bg); color: #fff; border: 1px solid var(--accent); border-radius: 8px; padding: 25px; max-width: 800px; width: 95%; max-height: 90vh; overflow-y: auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.8); }
+        .modal-content strong {color: var(--accent)}
         .tutB {color: #99ff99}
-        .close-btn { position: absolute; top: 15px; right: 15px; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem; }
-        .spinner { width: 20px; height: 20px; border: 2px solid #333; border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px;}
+        .close-btn { position: absolute; top: 15px; right: 15px; color: var(--danger); cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: color 0.2s; }
+        .close-btn:hover { color: #ff7777; }
+        .spinner { width: 18px; height: 18px; border: 2px solid #333; border-top: 2px solid var(--accent); border-radius: 50%; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 10px;}
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        #toast { position: fixed; bottom: 20px; right: 20px; background: #000; border: 1px solid var(--accent); color: var(--text); padding: 15px 25px; z-index: 9999; font-weight: bold; box-shadow: 0 0 15px rgba(0, 143, 17, 0.3); transition: opacity 0.3s; }
-        #toast.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 15px rgba(255, 68, 68, 0.3); }
-        #toast.warn { border-color: var(--warn); color: var(--warn); box-shadow: 0 0 15px rgba(255, 170, 0, 0.3); }
+        #toast { position: fixed; bottom: 20px; right: 20px; background: #0a0a0a; border: 1px solid var(--accent); border-radius: 6px; color: var(--accent); padding: 15px 25px; z-index: 9999; font-weight: bold; box-shadow: 0 4px 15px rgba(0, 143, 17, 0.2); transition: opacity 0.3s; }
+        #toast.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 4px 15px rgba(255, 68, 68, 0.2); }
+        #toast.warn { border-color: var(--warn); color: var(--warn); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.2); }
     </style>
 </head>
 <body>
@@ -83,6 +96,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
                                 _\///////////////__\///__\///____\///__\///____\///____________\///______________\///___\////////\//__\///____\///___\////////\//___\////////_____\//////////__\///__________                                         
                                                                                      
   >> FASTLY LINK MANAGER/EDITOR <<  
+  _/By Dominus_Elitus\_
 </pre>
 </header>
 
@@ -155,7 +169,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
         <h3 style="color: var(--warn); margin-top: 0;" id="deactivateTitle">[!] CONFIRM DEACTIVATION</h3>
         <p style="margin: 15px 0; color: #fff;">Are you sure?</p>
         <p style="color: #ccc; font-size: 0.9rem;" id="deactivateInstructions"></p>
-        <input type="text" id="deactivateInput" placeholder="Type name here to confirm..." oninput="checkDeactivateMatch()" style="text-align: center; font-weight: bold;">
+        <input type="text" id="deactivateInput" placeholder="Type name here to confirm..." oninput="checkDeactivateMatch()" style="text-align: center; font-weight: bold; font-size: 1.1rem; color: #fff;">
         <div class="grid" style="margin-top: 20px;">
             <button class="secondary" onclick="closeAllModals()">CANCEL</button>
             <button class="warn" id="deactivateConfirmBtn" disabled onclick="executeDeactivateActivate()">CONFIRM</button>
@@ -212,7 +226,6 @@ __/\\\\\\\\\\\\_________________________________________________________________
     let db = { accounts: [] };
     let cache = {}; 
     
-    // Global state for whatever link is currently being acted upon
     let currentTarget = {
         accIndex: null, id: '', key: '', name: '', 
         domain: '', host: '', backendName: '', isActive: false, version: ''
@@ -239,7 +252,6 @@ __/\\\\\\\\\\\\_________________________________________________________________
         document.getElementById('deactivateInput').value = '';
     }
 
-    // --- Core UI & Fetch ---
     function render() {
         const accList = document.getElementById('accountList');
         const accSelect = document.getElementById('activeAccount');
@@ -251,7 +263,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
             accList.innerHTML += `
                 <div class="account-tag">
                     <span>${acc.name} (****${acc.key.slice(-4)})</span>
-                    <span style="color:red; cursor:pointer;" onclick="deleteAccount(${index})">[DEL]</span>
+                    <span style="color:var(--danger); cursor:pointer; font-weight:bold; padding:0 5px;" onclick="deleteAccount(${index})">[DEL]</span>
                 </div>`;
             accSelect.innerHTML += `<option value="${acc.key}">${acc.name}</option>`;
 
@@ -260,11 +272,24 @@ __/\\\\\\\\\\\\_________________________________________________________________
                     [+] ${acc.name} <span id="count-acc-${index}"></span>
                 </button>
                 <div id="content-acc-${index}" class="accordion-content hidden">
+                    <div class="controls-bar hidden" id="controls-${index}">
+                        <input type="text" placeholder="Search services..." oninput="updateSearch('${index}', this.value)">
+                        <select onchange="updateSort('${index}', this.value)">
+                            <option value="A-Z">Sort: A-Z</option>
+                            <option value="Z-A">Sort: Z-A</option>
+                        </select>
+                        <select onchange="updatePageSize('${index}', this.value)">
+                            <option value="10">10 / page</option>
+                            <option value="25" selected>25 / page</option>
+                            <option value="50">50 / page</option>
+                            <option value="100">100 / page</option>
+                        </select>
+                    </div>
                     <div id="list-acc-${index}" style="min-height: 50px;">Click to load links...</div>
                     <div class="pagination-controls hidden" id="page-ctrl-${index}">
-                        <button id="prev-btn-${index}" class="secondary" onclick="changePage('${index}', -1)">PREV 25</button>
-                        <span id="page-indicator-${index}" style="font-size: 0.8rem; color: #888;">Page 1</span>
-                        <button id="next-btn-${index}" class="secondary" onclick="changePage('${index}', 1)">NEXT 25</button>
+                        <button id="prev-btn-${index}" class="secondary" onclick="changePage('${index}', -1)">PREV</button>
+                        <span id="page-indicator-${index}" style="font-size: 0.85rem; color: #888;">Page 1</span>
+                        <button id="next-btn-${index}" class="secondary" onclick="changePage('${index}', 1)">NEXT</button>
                     </div>
                 </div>
             `;
@@ -324,44 +349,74 @@ __/\\\\\\\\\\\\_________________________________________________________________
             const key = db.accounts[index].key;
             const services = await fastlyReq('/service', 'GET', null, key);
             document.getElementById(`count-acc-${index}`).innerText = `(${services.length}/100 Links)`;
-            cache[index] = { data: services, page: 1, totalPages: Math.ceil(services.length / 25) || 1 };
+            cache[index] = { 
+                data: services, 
+                page: 1, 
+                pageSize: 25, 
+                searchQuery: '', 
+                sortOrder: 'A-Z' 
+            };
             renderPage(index);
         } catch (e) { listDiv.innerHTML = `<span style="color:var(--danger)">API Error: Invalid token or offline.</span>`; }
     }
+
+    window.updateSearch = function(index, val) { cache[index].searchQuery = val; cache[index].page = 1; renderPage(index); }
+    window.updateSort = function(index, val) { cache[index].sortOrder = val; cache[index].page = 1; renderPage(index); }
+    window.updatePageSize = function(index, val) { cache[index].pageSize = parseInt(val); cache[index].page = 1; renderPage(index); }
 
     async function renderPage(index) {
         const state = cache[index];
         const listDiv = document.getElementById(`list-acc-${index}`);
         const ctrlDiv = document.getElementById(`page-ctrl-${index}`);
+        const filtersDiv = document.getElementById(`controls-${index}`);
         const key = db.accounts[index].key;
 
         if (state.data.length === 0) {
-            listDiv.innerHTML = "<span style='color:#555;'>No links provisioned on this account.</span>";
+            listDiv.innerHTML = "<span style='color:#666; font-style: italic;'>No links provisioned on this account.</span>";
+            ctrlDiv.classList.add('hidden'); filtersDiv.classList.add('hidden'); return;
+        }
+
+        filtersDiv.classList.remove('hidden');
+
+        let processedData = state.data.filter(s => s.name.toLowerCase().includes(state.searchQuery.toLowerCase()));
+        processedData.sort((a, b) => {
+            if (state.sortOrder === 'A-Z') return a.name.localeCompare(b.name);
+            else return b.name.localeCompare(a.name);
+        });
+
+        state.totalPages = Math.ceil(processedData.length / state.pageSize) || 1;
+        if (state.page > state.totalPages) state.page = state.totalPages;
+        if (state.page < 1) state.page = 1;
+
+        if (processedData.length === 0) {
+            listDiv.innerHTML = "<span style='color:#666; font-style: italic;'>No matching links found.</span>";
             ctrlDiv.classList.add('hidden'); return;
         }
 
-        listDiv.innerHTML = `<div class="spinner"></div> Extracting Domains & Hosts for Page ${state.page}...`;
+        listDiv.innerHTML = `<div class="spinner"></div> Loading Data...`;
         ctrlDiv.classList.add('hidden');
 
-        const start = (state.page - 1) * 25;
-        const pageServices = state.data.slice(start, start + 25);
+        const start = (state.page - 1) * state.pageSize;
+        const pageServices = processedData.slice(start, start + state.pageSize);
         let html = "";
 
         for (const s of pageServices) {
             try {
                 const activeObj = s.versions.find(ver => ver.active);
                 const isActive = !!activeObj;
-                const v = activeObj?.number || s.versions[0]?.number;
-                if (!v) continue;
+                const maxVer = Math.max(...s.versions.map(ver => ver.number));
+                const v = activeObj?.number || (isFinite(maxVer) ? maxVer : 1);
                 
-                const [domRes, bakRes] = await Promise.all([
-                    fastlyReq(`/service/${s.id}/version/${v}/domain`, 'GET', null, key).catch(()=>[]),
-                    fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[])
-                ]);
+                if (!s.fetchedDomain || !s.fetchedHost) {
+                    const [domRes, bakRes] = await Promise.all([
+                        fastlyReq(`/service/${s.id}/version/${v}/domain`, 'GET', null, key).catch(()=>[]),
+                        fastlyReq(`/service/${s.id}/version/${v}/backend`, 'GET', null, key).catch(()=>[])
+                    ]);
+                    s.fetchedDomain = domRes[0]?.name || "N/A";
+                    s.fetchedHost = bakRes[0]?.address || "N/A";
+                    s.fetchedBackendName = bakRes[0]?.name || "";
+                }
                 
-                s.fetchedDomain = domRes[0]?.name || "N/A";
-                s.fetchedHost = bakRes[0]?.address || "N/A";
-                s.fetchedBackendName = bakRes[0]?.name || "";
                 s.liveVersion = v;
                 s.isActive = isActive;
 
@@ -372,9 +427,9 @@ __/\\\\\\\\\\\\_________________________________________________________________
                 html += `
                     <div class="service-card">
                         <div class="service-info">
-                            <strong style="color: #fff; font-size: 1.1rem;">${s.name}</strong> ${statusHTML}<br>
-                            <span style="color:#aaa;">Domain:</span> <a href="https://${s.fetchedDomain}" target="_blank">${s.fetchedDomain}</a><br>
-                            <span style="color:#aaa;">Host:</span> <a href="http://${s.fetchedHost}" target="_blank">${s.fetchedHost}</a>
+                            <strong style="color: #fff; font-size: 1.1rem; letter-spacing: 0.5px;">${s.name}</strong> ${statusHTML}<br>
+                            <span style="color:#777; font-size: 0.85rem;">Domain:</span> <a href="https://${s.fetchedDomain}" target="_blank">${s.fetchedDomain}</a><br>
+                            <span style="color:#777; font-size: 0.85rem;">Host:</span> <a href="http://${s.fetchedHost}" target="_blank">${s.fetchedHost}</a>
                         </div>
                         <div class="service-actions">
                             <button onclick="openEdit(${index}, '${s.id}')">EDIT</button>
@@ -388,8 +443,13 @@ __/\\\\\\\\\\\\_________________________________________________________________
         listDiv.innerHTML = html;
         ctrlDiv.classList.remove('hidden');
         document.getElementById(`page-indicator-${index}`).innerText = `Page ${state.page} / ${state.totalPages}`;
-        document.getElementById(`prev-btn-${index}`).disabled = state.page === 1;
-        document.getElementById(`next-btn-${index}`).disabled = state.page === state.totalPages;
+        
+        const prevBtn = document.getElementById(`prev-btn-${index}`);
+        const nextBtn = document.getElementById(`next-btn-${index}`);
+        prevBtn.disabled = state.page === 1;
+        nextBtn.disabled = state.page === state.totalPages;
+        prevBtn.innerText = `PREV ${state.pageSize}`;
+        nextBtn.innerText = `NEXT ${state.pageSize}`;
     }
 
     function changePage(index, dir) { cache[index].page += dir; renderPage(index); }
@@ -490,7 +550,17 @@ __/\\\\\\\\\\\\_________________________________________________________________
 
             showToast("Updates deployed successfully!");
             closeAllModals();
-            fetchServicesForAccount(currentTarget.accIndex); 
+            
+            const svc = cache[currentTarget.accIndex].data.find(s => s.id === currentTarget.id);
+            if (svc) {
+                svc.name = newName;
+                svc.fetchedDomain = newDomain;
+                svc.fetchedHost = newHost;
+                svc.versions.forEach(v => v.active = false);
+                svc.versions.push({ number: nv, active: currentTarget.isActive });
+            }
+            renderPage(currentTarget.accIndex); 
+            
         } catch(e) { showToast(`Edit Error: ${e.message}`, 'error'); }
         
         btn.innerText = "💾 SAVE CHANGES & DEPLOY"; btn.disabled = false;
@@ -504,9 +574,18 @@ __/\\\\\\\\\\\\_________________________________________________________________
             await fastlyReq(`/service/${currentTarget.id}/version/${currentTarget.version}/${actionEndpoint}`, 'PUT', null, currentTarget.key);
             showToast(`Service successfully ${currentTarget.isActive ? 'deactivated' : 'reactivated'}.`, 'warn');
             closeAllModals();
-            
-            fetchServicesForAccount(currentTarget.accIndex);
+
+            const svc = cache[currentTarget.accIndex].data.find(s => s.id === currentTarget.id);
+            if (svc) {
+                svc.versions.forEach(v => v.active = false);
+                if (!currentTarget.isActive) {
+                    let targetVer = svc.versions.find(v => v.number === currentTarget.version);
+                    if (targetVer) targetVer.active = true;
+                }
+            }
+            renderPage(currentTarget.accIndex);
         } catch(e) { showToast(`Error: ${e.message}`, 'error'); }
+        btn.disabled = false; btn.innerText = "CONFIRM";
     }
 
     async function executeDelete() {
@@ -516,8 +595,11 @@ __/\\\\\\\\\\\\_________________________________________________________________
             await fastlyReq(`/service/${currentTarget.id}`, 'DELETE', null, currentTarget.key);
             showToast("Service permanently deleted.");
             closeAllModals();
-            
-            fetchServicesForAccount(currentTarget.accIndex);
+
+            // Cache update fix
+            const idx = cache[currentTarget.accIndex].data.findIndex(s => s.id === currentTarget.id);
+            if (idx !== -1) cache[currentTarget.accIndex].data.splice(idx, 1);
+            renderPage(currentTarget.accIndex);
         } catch (e) { showToast(`Delete Error: ${e.message}`, 'error'); }
         btn.disabled = false; btn.innerText = "DELETE";
     }
@@ -584,7 +666,7 @@ __/\\\\\\\\\\\\_________________________________________________________________
                     db = imported; cache = {}; save();
                     showToast("Import Successful! Dashboard restored.");
                 } else { showToast("ERROR: Invalid format. Missing 'accounts' array.", 'error'); }
-            } catch(err) { showToast("PARSE ERROR: File must be valid JSON.", 'error'); }
+            } catch(err) { showToast("PARSE ERROR: File must be valid dnfs (json).", 'error'); }
             event.target.value = '';
         };
         reader.readAsText(file);
